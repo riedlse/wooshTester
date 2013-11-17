@@ -57,8 +57,8 @@ public final class initTopComponent extends TopComponent {
     public String errorMessage = "";
     public String oper = "";
     public long errorDispStart = 0L;
-    public boolean printDialog = false;
-    public boolean printInteractive = false;
+    public boolean printDialog = true;
+    public boolean printInteractive = true;
     public static JTextArea ptext;
     private static boolean device123 = false;
     private static boolean device124 = false;
@@ -106,7 +106,12 @@ public final class initTopComponent extends TopComponent {
     }
 
     public void print() {
-        MessageFormat header = new MessageFormat(" ");
+        
+        printText = lserNum.getText() + "\n";
+        printText += lmMAC.getText() + "\n";
+        printText += lgMAC.getText() + "\n";
+             
+        MessageFormat header = new MessageFormat(" Whooshcom Production Test Follower");
         MessageFormat footer = new MessageFormat("Whooshcom Test Automation v" + 1 + "." + 0 + "." + 0 + "          Page - {0}");
         ptext.setText(printText);
         PrintingTask task = new PrintingTask(header, footer);
@@ -165,107 +170,28 @@ public final class initTopComponent extends TopComponent {
             Document doc;
             while (true) {
                 oper = operator.getText();
-                lOper.setText("Operator=" + oper);
-                
-                if (device123) {
-                    initialize.setEnabled(true);
-                    startTest.setEnabled(false);
+                if (oper.equals("abc")) {
+                    instructions.setText("Instructions: Please enter Operator initials");
                 } else {
-                    initialize.setEnabled(false);
-                    if (device50) {
-                        startTest.setEnabled(true);
-                    } else {
+                    lOper.setText("Operator=" + oper);
+
+                    if (device123) {
+                        initialize.setEnabled(true);
                         startTest.setEnabled(false);
-                    }
-                }
-               
-                // try to connect to device    
-                try {
-                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123").timeout(3000).get();
-                    device123 = true;
-                    deviceStatus.setText("Device found at 192.168.34.123 - Ready to program");
-                    Elements inputElements = doc.getElementsByTag("input");
-                    for (Element inputElement : inputElements) {
-                        String key = inputElement.attr("name");
-                        String value = inputElement.attr("value");
-                        System.out.println("name=" + key + " value=" + value);
-                        if (key.equals("M2")) {
-                            lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
-                        }
-                        if (key.equals("M0")) {
-                            lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
-                        }
-                        if (key.equals("M1")) {
-                            lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
-                        }
-                    }
-
-                    if (startProgram) {
-                        startProgram = false;
-                        // Save Serial Number
-                        try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                    .data("r", "Save-S/N")
-                                    .data("M2", String.format("%05d", serialNumber))
-                                    .timeout(3000)
-                                    .get();
-                        } catch (IOException ex) {
-                            System.out.println("Error Setting Serial Number");
-                            //Exceptions.printStackTrace(ex);
-                        }
-
-                        // Save Maintenance MAC
-                        try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                    .data("r", "Save-MAC-(maintenance)")
-                                    .data("M0", String.format("40-D8-55-%02X-%02X-%02X", m3, m2, m1))
-                                    .timeout(3000)
-                                    .get();
-                        } catch (IOException ex) {
-                            System.out.println("Error Setting maintenance MAC");
-                            //Exceptions.printStackTrace(ex);
-                        }
-
-                        // Save gigE MAC
-                        try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                    .data("r", "Save-MAC-(GIG-E)")
-                                    .data("M1", String.format("40-D8-55-%02X-%02X-%02X", e3, e2, e1))
-                                    .timeout(3000)
-                                    .get();
-                        } catch (IOException ex) {
-                            System.out.println("Error Setting Gig E MAC");
-                            //Exceptions.printStackTrace(ex);
-                        }
-
-                        // delete FPGA code
-                        try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                    .data("d", " DeleteFPGA code")
-                                    .timeout(3000)
-                                    .get();
-                        } catch (IOException ex) {
-                            System.out.println("Error deleting FPGA code");
-                            //Exceptions.printStackTrace(ex);
-                        }
-
                     } else {
-                        try {
-                            Thread.sleep(3000);
-                        } catch (InterruptedException ex6) {
-                            //Exceptions.printStackTrace(ex);
+                        initialize.setEnabled(false);
+                        if (device50) {
+                            startTest.setEnabled(true);
+                        } else {
+                            startTest.setEnabled(false);
                         }
                     }
 
-                } catch (IOException ex) {
-                    System.out.println(" No device at http://192.168.34.123");
-                    device123 = false;
-
-                    // try to read back device status
+                    // try to connect to device    
                     try {
-                        doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124").timeout(3000).get();
-                        device124 = true;
-                        deviceStatus.setText("Device found at 192.168.34.124 - Already Programmed RESETING to 192.168.34.50");
+                        doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123").timeout(3000).get();
+                        device123 = true;
+                        deviceStatus.setText("Device found at 192.168.34.123 - Ready to program");
                         Elements inputElements = doc.getElementsByTag("input");
                         for (Element inputElement : inputElements) {
                             String key = inputElement.attr("name");
@@ -281,47 +207,130 @@ public final class initTopComponent extends TopComponent {
                                 lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
                             }
                         }
-                        // try to reset device
-                        try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124/0")
-                                    .data("b", "")
-                                    .timeout(3000)
-                                    .get();
-                        } catch (IOException ex1) {
-                            System.out.println(" No device at http://ADMIN:admin@192.168.34.124");
-                            //Exceptions.printStackTrace(ex);
+
+                        if (startProgram) {
+                            startProgram = false;
+                            // Save Serial Number
+                            try {
+                                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                                        .data("r", "Save-S/N")
+                                        .data("M2", String.format("%05d", serialNumber))
+                                        .timeout(3000)
+                                        .get();
+                            } catch (IOException ex) {
+                                System.out.println("Error Setting Serial Number");
+                                //Exceptions.printStackTrace(ex);
+                            }
+
+                            // Save Maintenance MAC
+                            try {
+                                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                                        .data("r", "Save-MAC-(maintenance)")
+                                        .data("M0", String.format("40-D8-55-%02X-%02X-%02X", m3, m2, m1))
+                                        .timeout(3000)
+                                        .get();
+                            } catch (IOException ex) {
+                                System.out.println("Error Setting maintenance MAC");
+                                //Exceptions.printStackTrace(ex);
+                            }
+
+                            // Save gigE MAC
+                            try {
+                                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                                        .data("r", "Save-MAC-(GIG-E)")
+                                        .data("M1", String.format("40-D8-55-%02X-%02X-%02X", e3, e2, e1))
+                                        .timeout(3000)
+                                        .get();
+                            } catch (IOException ex) {
+                                System.out.println("Error Setting Gig E MAC");
+                                //Exceptions.printStackTrace(ex);
+                            }
+
+                            // delete FPGA code
+                            try {
+                                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                                        .data("d", " DeleteFPGA code")
+                                        .timeout(3000)
+                                        .get();
+                            } catch (IOException ex) {
+                                System.out.println("Error deleting FPGA code");
+                                //Exceptions.printStackTrace(ex);
+                            }
+
+                        } else {
+                            try {
+                                Thread.sleep(3000);
+                            } catch (InterruptedException ex6) {
+                                //Exceptions.printStackTrace(ex);
+                            }
                         }
 
-                    } catch (IOException ex2) {
-                        device124 = false;
-                        System.out.println("Error reading 124 back box status");
-                        //Exceptions.printStackTrace(ex);
+                    } catch (IOException ex) {
+                        System.out.println(" No device at http://192.168.34.123");
+                        device123 = false;
 
+                        // try to read back device status
                         try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.50").timeout(3000).get();
-                            device50 = true;
-                            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
+                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124").timeout(3000).get();
+                            device124 = true;
+                            deviceStatus.setText("Device found at 192.168.34.124 - Already Programmed RESETING to 192.168.34.50");
                             Elements inputElements = doc.getElementsByTag("input");
                             for (Element inputElement : inputElements) {
                                 String key = inputElement.attr("name");
                                 String value = inputElement.attr("value");
+                                System.out.println("name=" + key + " value=" + value);
+                                if (key.equals("M2")) {
+                                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
+                                }
+                                if (key.equals("M0")) {
+                                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
+                                }
+                                if (key.equals("M1")) {
+                                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                                }
+                            }
+                            // try to reset device
+                            try {
+                                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124/0")
+                                        .data("b", "")
+                                        .timeout(3000)
+                                        .get();
+                            } catch (IOException ex1) {
+                                System.out.println(" No device at http://ADMIN:admin@192.168.34.124");
+                                //Exceptions.printStackTrace(ex);
+                            }
 
+                        } catch (IOException ex2) {
+                            device124 = false;
+                            System.out.println("Error reading 124 back box status");
+                            //Exceptions.printStackTrace(ex);
+
+                            try {
+                                doc = Jsoup.connect("http://192.168.34.50/device.htm").timeout(3000).get();
+                                device50 = true;
+                                deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
+                                Elements inputElements = doc.getElementsByTag("input");
+                                for (Element inputElement : inputElements) {
+                                    String key = inputElement.attr("name");
+                                    String value = inputElement.attr("value");
+
+                                }
+
+                                if (runTest) {
+                                    instructions.setText("Instructions: Running device tests");
+                                } else {
+                                    instructions.setText("Instructions: Hook device up to tester and press Test");
+                                }
+
+                            } catch (IOException ex3) {
+                                device50 = true;
+                                System.out.println("Error reading 50 back box status");
+                                //Exceptions.printStackTrace(ex);
                             }
-                            
-                            if (runTest) {
-                                instructions.setText("Instructions: Running device tests");
-                            } else {
-                                instructions.setText("Instructions: Hook device up to tester and press Test");                                
-                            }
-                            
-                        } catch (IOException ex3) {
-                            device50 = true;
-                            System.out.println("Error reading 50 back box status");
                             //Exceptions.printStackTrace(ex);
                         }
-                        //Exceptions.printStackTrace(ex);
-                    }
 
+                    }
                 }
                 try {
                     Thread.sleep(3000);
@@ -333,10 +342,10 @@ public final class initTopComponent extends TopComponent {
     }
 
     /**
-         * This method is called from within the constructor to initialize the
-         * form. WARNING: Do NOT modify this code. The content of this method is
-         * always regenerated by the Form Editor.
-         */
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
@@ -354,6 +363,7 @@ public final class initTopComponent extends TopComponent {
         instructions = new javax.swing.JLabel();
         errorStatus = new javax.swing.JLabel();
         startTest = new javax.swing.JButton();
+        printit = new javax.swing.JButton();
 
         jLabel1.setLabelFor(serNum);
         org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel1.text")); // NOI18N
@@ -397,6 +407,13 @@ public final class initTopComponent extends TopComponent {
             }
         });
 
+        org.openide.awt.Mnemonics.setLocalizedText(printit, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.printit.text")); // NOI18N
+        printit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                printitActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -433,6 +450,10 @@ public final class initTopComponent extends TopComponent {
                             .addComponent(deviceStatus)
                             .addComponent(lgMAC))
                         .addGap(0, 0, Short.MAX_VALUE))))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(printit)
+                .addContainerGap())
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -459,7 +480,9 @@ public final class initTopComponent extends TopComponent {
                 .addComponent(instructions)
                 .addGap(18, 18, 18)
                 .addComponent(errorStatus)
-                .addContainerGap(129, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 94, Short.MAX_VALUE)
+                .addComponent(printit)
+                .addContainerGap())
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
@@ -498,7 +521,7 @@ public final class initTopComponent extends TopComponent {
         lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=xx-xx-xx-xx-xx-xx", m3, m2, m1));
         lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=xx-xx-xx-xx-xx-xx", e3, e2, e1));
         lserNum.setText("Serial Number set=" + serialNumber + " Read=xxxx");
-        
+
         if (device123) {
             instructions.setText("Instructions: Programming Check LED sequence");
             startProgram = true;
@@ -510,6 +533,10 @@ public final class initTopComponent extends TopComponent {
     private void startTestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startTestActionPerformed
         runTest = true;
     }//GEN-LAST:event_startTestActionPerformed
+
+    private void printitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_printitActionPerformed
+        print();
+    }//GEN-LAST:event_printitActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel deviceStatus;
@@ -524,6 +551,7 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JLabel lmMAC;
     private javax.swing.JLabel lserNum;
     private javax.swing.JTextField operator;
+    private javax.swing.JButton printit;
     private javax.swing.JSpinner serNum;
     private javax.swing.JButton startTest;
     // End of variables declaration//GEN-END:variables
