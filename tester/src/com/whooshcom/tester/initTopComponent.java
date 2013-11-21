@@ -71,6 +71,7 @@ public final class initTopComponent extends TopComponent {
     public static String gigeMAC = "";
     public static String smaintMAC = "";
     public static String sgigeMAC = "";
+    public static String sserialNumber = "";
     public boolean FPGAselected = false;
     public boolean prReady = false;
     public String errorMessage = "";
@@ -79,10 +80,6 @@ public final class initTopComponent extends TopComponent {
     public boolean printDialog = true;
     public boolean printInteractive = true;
     public static JTextArea ptext;
-    private static boolean device123 = false;
-    private static boolean device124 = false;
-    private static boolean device50 = false;
-    private static boolean tester = false;
     private static boolean startProgram = false;
     private static boolean runTest = false;
     private final String useFont = "Consolas";
@@ -173,7 +170,7 @@ public final class initTopComponent extends TopComponent {
         protected void done() {
             errorMessage = message;
             errorDispStart = System.currentTimeMillis();
-            //message(!complete, message);
+            message(!complete, message);
         }
     }
 
@@ -182,51 +179,489 @@ public final class initTopComponent extends TopComponent {
         errorDispStart = System.currentTimeMillis();
 //        message(true, msg);
     }
+    
+    private boolean connect123() {
+        System.out.println("Trying to connect to device at http://192.168.34.123");
+        try {
+            // try to connect to device
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123").timeout(3000).get();
+            deviceStatus.setText("Device found at 192.168.34.123 - Ready to program");
+            Elements inputElements = doc.getElementsByTag("input");
+            for (Element inputElement : inputElements) {
+                String key = inputElement.attr("name");
+                String value = inputElement.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (key.equals("M2")) {
+                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
+                }
+                if (key.equals("M0")) {
+                    maintMAC = value;
+                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
+                }
+                if (key.equals("M1")) {
+                    gigeMAC = value;
+                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                }
+            }
+        } catch (IOException ex) {
+            deviceStatus.setText("No Device at http://192.168.34.123");
+            System.out.println(" No device at http://192.168.34.123");
+            //Exceptions.printStackTrace(ex);
+            return (false);
+        }
+        return (true);
+    }
+
+    private boolean deleteFPGA() {
+        System.out.println("Deleting FPGA code");
+        // delete FPGA code
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                    .data("d", " DeleteFPGA code")
+                    .timeout(3000)
+                    .get();
+        } catch (IOException ex) {
+            errorStatus.setText("Error deleting FPGA code");
+            //Exceptions.printStackTrace(ex);
+            return (false);
+        }
+
+        // Will have to loop here until it's done
+        boolean erasing = true;
+        while (erasing) {
+            // delete FPGA code
+            try {
+                Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123")
+                        .timeout(3000)
+                        .get();
+                System.out.println("Erasing");
+                Elements eraseElements = doc.getElementsByTag("input");
+                for (Element eraseElement : eraseElements) {
+                    String key = eraseElement.attr("name");
+                    String value = eraseElement.attr("value");
+                    //System.out.println("name=" + key + " value=" + value);
+                    if (value.equals("Update-FPGA")) {
+                        erasing = false;
+                    }
+                }
+            } catch (IOException ex) {
+                System.out.println("Error erasing FPGA");
+                //Exceptions.printStackTrace(ex);
+                return (false);
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex6) {
+                //Exceptions.printStackTrace(ex);
+            }
+
+        }
+        return (true);
+    }
+
+    private boolean saveGige() {
+        boolean rc = true;
+        // Save gigE MAC
+        System.out.println("Saving GigE Mac=" + sgigeMAC);
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                    .data("r", "Save-MAC-(GIG-E)")
+                    .data("M1", sgigeMAC)
+                    .timeout(3000)
+                    .get();
+            Elements inputgElements = doc.getElementsByTag("input");
+            for (Element inputgElement : inputgElements) {
+                String key = inputgElement.attr("name");
+                String value = inputgElement.attr("value");
+                //System.out.println("name=" + key + " value=" + value);
+                if (key.equals("M2")) {
+                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
+                }
+                if (key.equals("M0")) {
+                    lmMAC.setText(String.format("Maintenance MAC set=40-d8-55-%02x-%02x-%02x Read=" + value, m3, m2, m1));
+                }
+                if (key.equals("M1")) {
+                    if (sgigeMAC.equals(value)) {
+                        lgMAC.setForeground(Color.green);
+                    } else {
+                        lgMAC.setForeground(Color.red);
+                        rc = false;
+                    }
+                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                }
+            }
+        } catch (IOException ex) {
+            errorStatus.setText("Error Setting Gig E MAC");
+            //Exceptions.printStackTrace(ex);
+            rc = false;
+        }
+        return (rc);
+    }
+
+    private boolean connectTester() {
+        System.out.println("Trying to connect to tester at http://192.168.34.121/Tester.htm");
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm").timeout(3000).get();
+            deviceStatus.setText("Tester found at 192.168.34.121");
+            Elements inputElements = doc.getElementsByTag("input");
+            for (Element inputElement : inputElements) {
+                String key = inputElement.attr("name");
+                String value = inputElement.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (key.equals("gmac")) {
+                    testerPresent.setForeground(Color.green);
+                    testerPresent.setText("Tester Present: GigE MAC=" + value);
+                }
+            }
+        } catch (IOException ex) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: No Tester Present");
+            return (false);
+        }
+        return (true);
+    }
+
+    private boolean programFPGA() {
+        boolean rc = true;
+        System.out.println("Programming FPGA with " + FPGAfileptr.getName());
+        //program FPGA
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        try {
+            HttpPost httppost = new HttpPost("http://ADMIN:admin@192.168.34.123/eS.bin");
+
+            FileBody bin = new FileBody(FPGAfileptr, ContentType.APPLICATION_OCTET_STREAM, FPGAfileptr.getName());
+            //StringBody comment = new StringBody("A binary file of some kind", ContentType.TEXT_PLAIN);
+
+            HttpEntity reqEntity = MultipartEntityBuilder.create()
+                    .addPart("datafile", bin)
+                    .build();
+
+            httppost.setEntity(reqEntity);
+
+            System.out.println("executing request " + httppost.getRequestLine());
+            CloseableHttpResponse response = httpclient.execute(httppost);
+            try {
+                System.out.println("----------------------------------------");
+                System.out.println(response.getStatusLine());
+                HttpEntity resEntity = response.getEntity();
+                if (resEntity != null) {
+                    System.out.println("Response content length: " + resEntity.getContentLength());
+                }
+                EntityUtils.consume(resEntity);
+            } finally {
+                response.close();
+            }
+        } catch (IOException ex) {
+            //Exceptions.printStackTrace(ex);
+            rc = false;
+        } finally {
+            try {
+                httpclient.close();
+            } catch (IOException ex) {
+                //Exceptions.printStackTrace(ex);
+                rc = false;
+            }
+        }
+        return(rc);
+    }
+
+    private boolean saveMaint() {
+        boolean rc = true;
+        System.out.println("Saving Maintenance MAC=" + smaintMAC);
+        // Save Maintenance MAC
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                    .data("r", "Save-MAC-(maintenance)")
+                    .data("M0", smaintMAC)
+                    .timeout(3000)
+                    .get();
+            Elements inputgElements = doc.getElementsByTag("input");
+            for (Element inputgElement : inputgElements) {
+                String key = inputgElement.attr("name");
+                String value = inputgElement.attr("value");
+                //System.out.println("name=" + key + " value=" + value);
+                if (key.equals("M2")) {
+                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
+                }
+                if (key.equals("M0")) {
+                    if (smaintMAC.equals(value)) {
+                        lmMAC.setForeground(Color.green);
+                    } else {
+                        lmMAC.setForeground(Color.red);
+                        rc = false;
+                    }
+                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
+                }
+                if (key.equals("M1")) {
+                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                }
+            }
+        } catch (IOException ex) {
+            System.out.println("Error Setting maintenance MAC");
+            //Exceptions.printStackTrace(ex);
+            rc = false;
+        }
+        return(rc);
+    }
+    
+    private boolean saveSerial() {
+        boolean rc = true;
+        System.out.println("Saving Serial Number=" + sserialNumber);
+
+        // Save Serial Number
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
+                    .data("r", "Save-S/N")
+                    .data("M2", sserialNumber)
+                    .timeout(3000)
+                    .get();
+            Elements inputgElements = doc.getElementsByTag("input");
+            for (Element inputgElement : inputgElements) {
+                String key = inputgElement.attr("name");
+                String value = inputgElement.attr("value");
+                //System.out.println("name=" + key + " value=" + value);
+                if (key.equals("M2")) {
+                    if (sserialNumber.equals(value)) {
+                        lserNum.setForeground(Color.green);
+                    } else {
+                        lserNum.setForeground(Color.red);
+                        rc = false;
+                    }
+                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
+                }
+                if (key.equals("M0")) {
+                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
+                }
+                if (key.equals("M1")) {
+                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                }
+            }
+        } catch (IOException ex) {
+            errorStatus.setText("Error Setting Serial Number");
+            //Exceptions.printStackTrace(ex);
+            rc = false;
+        }
+        return(rc);
+    }
+
+    private boolean startTester() {
+        System.out.println("Trying to start tester");
+        // Start Tester
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                    .data("eT", "Turn ON")
+                    .timeout(3000)
+                    .get();
+        } catch (IOException ex10) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: Starting Tester");
+            return(false);
+        }
+        return(true);
+    }
+   
+    private boolean setTesterMAC() {
+        System.out.println("Trying to set tester MAC");
+        // Set mac on tester
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                    .data("gmac", gigeMAC)
+                    .timeout(3000)
+                    .get();
+        } catch (IOException ex10) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: setting mac on tester");
+            return(false);
+        }
+
+        // Modify Settings
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                    .data("A0g", "Modify Settings - 2")
+                    .timeout(3000)
+                    .get();
+        } catch (IOException ex10) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: tester modify settings");
+            return(false);
+        }
+
+        // save and apply changes
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                    .data("esf", "Save and apply changes")
+                    .timeout(3000)
+                    .get();
+        } catch (IOException ex10) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: tester save and apply changes");
+            return(false);
+        }
+
+        // Verify mac set correctly
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                    .timeout(3000)
+                    .get();
+            deviceStatus.setText("Tester found at 192.168.34.121");
+            Elements input3Elements = doc.getElementsByTag("input");
+            for (Element input3Element : input3Elements) {
+                String key = input3Element.attr("name");
+                String value = input3Element.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (key.equals("gmac")) {
+                    if (gigeMAC.equals(value)) {
+                        testerPresent.setForeground(Color.green);
+                    } else {
+                        testerPresent.setForeground(Color.red);
+                    }
+                    testerPresent.setText("Tester Present: GigE MAC=" + value + " set=" + gigeMAC);
+                }
+            }
+        } catch (IOException ex11) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: tester checking mac address");
+            return(false);
+        }
+        return(true);
+    }
+
+    private void setupScreen() {
+        // Calculate mac addresses
+        serialNumber = (Integer) serNum.getValue();
+        maintMac = baseMAC + ((serialNumber - 1001) * 2);
+        gigeMac = baseMAC + ((serialNumber - 1001) * 2) + 1;
+        m3 = (maintMac >> 16) & 0x00ff;
+        m2 = (maintMac >> 8) & 0x00ff;
+        m1 = maintMac & 0x00ff;
+        e3 = (gigeMac >> 16) & 0x00ff;
+        e2 = (gigeMac >> 8) & 0x00ff;
+        e1 = gigeMac & 0x00ff;
+        lgMAC.setForeground(Color.black);
+        lmMAC.setForeground(Color.black);
+        lserNum.setForeground(Color.black);
+        smaintMAC = String.format("40-d8-55-%02x-%02x-%02x", m3, m2, m1);
+        sgigeMAC = String.format("40-d8-55-%02x-%02x-%02x", e3, e2, e1);
+        sserialNumber = String.format("%05d", serialNumber);
+        lmMAC.setText("Maintenance MAC set=" + smaintMAC + " Read=xx-xx-xx-xx-xx-xx");
+        lgMAC.setText("GigE MAC set=" + sgigeMAC + " Read=xx-xx-xx-xx-xx-xx");
+        lserNum.setText("Serial Number set=" + sserialNumber + " Read=xxxxx");
+        errorStatus.setText("Error:");
+    }
+
+    private void delay(long seconds) {
+        System.out.println("Sleeping " + seconds + " seconds");
+        try {
+            Thread.sleep(seconds * 1000);
+        } catch (InterruptedException ex6) {
+            //Exceptions.printStackTrace(ex);
+        }
+    }
+
+    private void resetDevice(int lastOctet) {
+        System.out.println("Reset 192.168.34." + lastOctet);
+        // try to reset device
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34." + lastOctet + "/0")
+                    .data("b", "")
+                    .timeout(3000)
+                    .get();
+        } catch (IOException ex1) {
+            errorStatus.setText("Error resetting device at http://ADMIN:admin@192.168.34.123");
+            //Exceptions.printStackTrace(ex);
+        }
+    }
+
+    private boolean connect124() {
+        // try to read back device status
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124").timeout(3000).get();
+            deviceStatus.setText("Device found at 192.168.34.124 - Already Programmed RESETING to 192.168.34.50");
+            Elements inputElements = doc.getElementsByTag("input");
+            for (Element inputElement : inputElements) {
+                String key = inputElement.attr("name");
+                String value = inputElement.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (key.equals("M2")) {
+                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
+                }
+                if (key.equals("M0")) {
+                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
+                }
+                if (key.equals("M1")) {
+                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                }
+            }
+        } catch (IOException ex2) {
+            System.out.println("Error reading 124 back box status");
+            //Exceptions.printStackTrace(ex);
+            return (false);
+        }
+        return (true);
+    }
+
+    private boolean connect50() {
+        try {
+            Document doc = Jsoup.connect("http://192.168.34.50/device.htm").timeout(3000).get();
+            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
+            Elements inputElements = doc.getElementsByTag("input");
+            for (Element inputElement : inputElements) {
+                String key = inputElement.attr("name");
+                String value = inputElement.attr("value");
+
+            }
+        } catch (IOException ex3) {
+            errorStatus.setText("Error reading back box status ip 192.168.34.50");
+            //Exceptions.printStackTrace(ex);
+            return(false);
+        }
+        return(true);
+    }
+
+    private boolean testerOff() {
+        // VInsure tester is not running
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                    .timeout(3000)
+                    .get();
+            deviceStatus.setText("Tester found at 192.168.34.121");
+            Elements input3Elements = doc.getElementsByTag("input");
+            for (Element input3Element : input3Elements) {
+                String key = input3Element.attr("name");
+                String value = input3Element.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (key.equals("eT")) {
+                    if (value.equals("Turn OFF")) {
+                        // Stop Tester
+                        try {
+                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                                    .data("eT", "Turn OFF")
+                                    .timeout(3000)
+                                    .get();
+                        } catch (IOException ex10) {
+                            //Exceptions.printStackTrace(ex);
+                            errorStatus.setText("ERROR: Turning Tester OFF");
+                            return(false);
+                        }
+
+                    }
+                }
+            }
+        } catch (IOException ex11) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: Getting Tester run status");
+            return(false);
+        }
+        return(true);
+    }
 
     private class ExecTest implements Runnable {
 
         @Override
         public void run() {
-            Document doc;
-            // Calculate mac addresses
-            serialNumber = (Integer) serNum.getValue();
-            maintMac = baseMAC + ((serialNumber - 1001) * 2);
-            gigeMac = baseMAC + ((serialNumber - 1001) * 2) + 1;
-            m3 = (maintMac >> 16) & 0x00ff;
-            m2 = (maintMac >> 8) & 0x00ff;
-            m1 = maintMac & 0x00ff;
-            e3 = (gigeMac >> 16) & 0x00ff;
-            e2 = (gigeMac >> 8) & 0x00ff;
-            e1 = gigeMac & 0x00ff;
-            lgMAC.setForeground(Color.black);
-            lmMAC.setForeground(Color.black);
-            lserNum.setForeground(Color.black);            
-            lmMAC.setText(String.format("Maintenance MAC set=40-d8-55-%02x-%02x-%02x Read=xx-xx-xx-xx-xx-xx", m3, m2, m1));
-            lgMAC.setText(String.format("GigE MAC set=40-d8-55-%02x-%02x-%02x Read=xx-xx-xx-xx-xx-xx", e3, e2, e1));
-            smaintMAC = String.format("40-d8-55-%02x-%02x-%02x", m3, m2, m1);
-            sgigeMAC = String.format("40-d8-55-%02x-%02x-%02x", e3, e2, e1);
-            lserNum.setText("Serial Number set=" + serialNumber + " Read=xxxx");
-            
-            try {
-                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm").timeout(3000).get();
-                deviceStatus.setText("Tester found at 192.168.34.121");
-                tester = true;
-                Elements inputElements = doc.getElementsByTag("input");
-                for (Element inputElement : inputElements) {
-                    String key = inputElement.attr("name");
-                    String value = inputElement.attr("value");
-                    System.out.println("name=" + key + " value=" + value);
-                    if (key.equals("gmac")) {
-                        testerPresent.setForeground(Color.green);
-                        testerPresent.setText("Tester Present: GigE MAC=" + value);
-                    }
-                }
-            } catch (IOException ex) {
-                //Exceptions.printStackTrace(ex);
-                errorStatus.setText("ERROR: No Tester Present");
-            }
-
-            while (true) {
+            setupScreen();
+            boolean setupDone = false;
+            while (!setupDone) {
                 oper = operator.getText();
                 if (oper.equals("abc")) {
                     instructions.setText("Instructions: Please enter Operator initials");
@@ -236,430 +671,71 @@ public final class initTopComponent extends TopComponent {
                     if (!FPGAselected) {
                         instructions.setText("Instructions: Please select FPGA file");
                     } else {
-                        instructions.setText("Instructions: Searching for Device");
-                        if (device123) {
-                            initialize.setEnabled(true);
-                            startTest.setEnabled(false);
-                            instructions.setText("Instructions: Set serial number and initialize");
+                        if (connectTester()) {
+                            setupDone = true;
                         } else {
-                            initialize.setEnabled(false);
-                            if (device50) {
-                                instructions.setText("Instructions: Connect tester and start test");
-                                startTest.setEnabled(true);
-                            } else {
-                                startTest.setEnabled(false);
-                            }
+                            instructions.setText("Instructions: Please connect Tester");
                         }
-
-                        // try to connect to device    
-                        try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123").timeout(3000).get();
-                            device123 = true;
-                            deviceStatus.setText("Device found at 192.168.34.123 - Ready to program");
-                            errorStatus.setText("Error:");
-                            Elements inputElements = doc.getElementsByTag("input");
-                            for (Element inputElement : inputElements) {
-                                String key = inputElement.attr("name");
-                                String value = inputElement.attr("value");
-                                System.out.println("name=" + key + " value=" + value);
-                                if (key.equals("M2")) {
-                                    lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
-                                }
-                                if (key.equals("M0")) {
-                                    maintMAC = value;
-                                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
-                                }
-                                if (key.equals("M1")) {
-                                    gigeMAC = value;
-                                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
-                                }
-                            }
-
-                            if (startProgram) {
-                                startProgram = false;
-
-                                // Save gigE MAC
-                                try {
-                                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                            .data("r", "Save-MAC-(GIG-E)")
-                                            .data("M1", String.format("40-D8-55-%02X-%02X-%02X", e3, e2, e1))
-                                            .timeout(3000)
-                                            .get();
-                                    Elements inputgElements = doc.getElementsByTag("input");
-                                    for (Element inputgElement : inputgElements) {
-                                        String key = inputgElement.attr("name");
-                                        String value = inputgElement.attr("value");
-                                        //System.out.println("name=" + key + " value=" + value);
-                                        if (key.equals("M2")) {
-                                            lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
-                                        }
-                                        if (key.equals("M0")) {
-                                            maintMAC = value;
-                                            lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
-                                        }
-                                        if (key.equals("M1")) {
-                                            if (gigeMAC.equals(value)) {
-                                                lgMAC.setForeground(Color.green);
-                                            } else {
-                                                lgMAC.setForeground(Color.red);                                                
-                                            }
-                                            lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
-                                        }
-                                    }
-                                    } catch (IOException ex) {
-                                    errorStatus.setText("Error Setting Gig E MAC");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-
-                                // delete FPGA code
-                                try {
-                                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                            .data("d", " DeleteFPGA code")
-                                            .timeout(3000)
-                                            .get();
-                                } catch (IOException ex) {
-                                    errorStatus.setText("Error deleting FPGA code");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-
-                                // Will have to loop here until it's done
-                                boolean erasing = true;
-                                while (erasing) {
-                                    // delete FPGA code
-                                    try {
-                                        doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123")
-                                                .timeout(3000)
-                                                .get();
-                                        System.out.println("Erasing");
-                                        Elements eraseElements = doc.getElementsByTag("input");
-                                        for (Element eraseElement : eraseElements) {
-                                            String key = eraseElement.attr("name");
-                                            String value = eraseElement.attr("value");
-                                            //System.out.println("name=" + key + " value=" + value);
-                                            if (value.equals("Update-FPGA")) {
-                                                erasing = false;
-                                            }
-                                        }
-                                    } catch (IOException ex) {
-                                        System.out.println("Error erasing FPGA");
-                                        //Exceptions.printStackTrace(ex);
-                                    }
-                                    try {
-                                        Thread.sleep(1000);
-                                    } catch (InterruptedException ex6) {
-                                        //Exceptions.printStackTrace(ex);
-                                    }
-
-                                }
-
-                                System.out.println("Programming");
-
-                                //program FPGA
-                                CloseableHttpClient httpclient = HttpClients.createDefault();
-                                try {
-                                    HttpPost httppost = new HttpPost("http://ADMIN:admin@192.168.34.123/eS.bin");
-
-                                    FileBody bin = new FileBody(FPGAfileptr, ContentType.APPLICATION_OCTET_STREAM, FPGAfileptr.getName());
-                                    //StringBody comment = new StringBody("A binary file of some kind", ContentType.TEXT_PLAIN);
-
-                                    HttpEntity reqEntity = MultipartEntityBuilder.create()
-                                            .addPart("datafile", bin)
-                                            .build();
-
-                                    httppost.setEntity(reqEntity);
-
-                                    System.out.println("executing request " + httppost.getRequestLine());
-                                    CloseableHttpResponse response = httpclient.execute(httppost);
-                                    try {
-                                        System.out.println("----------------------------------------");
-                                        System.out.println(response.getStatusLine());
-                                        HttpEntity resEntity = response.getEntity();
-                                        if (resEntity != null) {
-                                            System.out.println("Response content length: " + resEntity.getContentLength());
-                                        }
-                                        EntityUtils.consume(resEntity);
-                                    } finally {
-                                        response.close();
-                                    }
-                                } finally {
-                                    httpclient.close();
-                                }
-
-                                System.out.println("Sleeping 10 seconds");
-                                try {
-                                    Thread.sleep(10000);
-                                } catch (InterruptedException ex6) {
-                                    //Exceptions.printStackTrace(ex);
-                                }
-
-                                System.out.println("Maint Mac");
-
-                                // Save Maintenance MAC
-                                try {
-                                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                            .data("r", "Save-MAC-(maintenance)")
-                                            .data("M0", String.format("40-D8-55-%02x-%02x-%02x", m3, m2, m1))
-                                            .timeout(3000)
-                                            .get();
-                                    Elements inputgElements = doc.getElementsByTag("input");
-                                    for (Element inputgElement : inputgElements) {
-                                        String key = inputgElement.attr("name");
-                                        String value = inputgElement.attr("value");
-                                        //System.out.println("name=" + key + " value=" + value);
-                                        if (key.equals("M2")) {
-                                            lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
-                                        }
-                                        if (key.equals("M0")) {
-                                            if (maintMAC.equals(value)) {
-                                                lmMAC.setForeground(Color.green);
-                                            } else {
-                                                lmMAC.setForeground(Color.red);
-                                            }
-                                            lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
-                                        }
-                                        if (key.equals("M1")) {
-                                            lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
-                                        }
-                                    }
-                                } catch (IOException ex) {
-                                    System.out.println("Error Setting maintenance MAC");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-
-                                System.out.println("Serial Number");
-
-                                // Save Serial Number
-                                try {
-                                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
-                                            .data("r", "Save-S/N")
-                                            .data("M2", String.format("%05d", serialNumber))
-                                            .timeout(3000)
-                                            .get();
-                                    Elements inputgElements = doc.getElementsByTag("input");
-                                    for (Element inputgElement : inputgElements) {
-                                        String key = inputgElement.attr("name");
-                                        String value = inputgElement.attr("value");
-                                        //System.out.println("name=" + key + " value=" + value);
-                                        if (key.equals("M2")) {
-                                            String stemp = String.format("%05d", serialNumber);
-                                            if (stemp.equals(value)) {
-                                                lserNum.setForeground(Color.green);
-                                            } else {
-                                                lserNum.setForeground(Color.red);                                                
-                                            }
-                                            lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
-                                        }
-                                        if (key.equals("M0")) {
-                                            lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
-                                        }
-                                        if (key.equals("M1")) {
-                                            lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
-                                        }
-                                    }
-                                } catch (IOException ex) {
-                                    errorStatus.setText("Error Setting Serial Number");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-                                
-                                System.out.println("Reset");
-
-                                // try to reset device
-                                try {
-                                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/0")
-                                            .data("b", "")
-                                            .timeout(3000)
-                                            .get();
-                                } catch (IOException ex1) {
-                                    errorStatus.setText("Error resetting device at http://ADMIN:admin@192.168.34.123");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-
-                            } else {
-                                try {
-                                    Thread.sleep(3000);
-                                } catch (InterruptedException ex6) {
-                                    //Exceptions.printStackTrace(ex);
-                                }
-                            }
-
-                        } catch (IOException ex) {
-                            deviceStatus.setText("No Device");
-                            System.out.println(" No device at http://192.168.34.123");
-                            device123 = false;
-
-                            // try to read back device status
-                            try {
-                                doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124").timeout(3000).get();
-                                device124 = true;
-                                deviceStatus.setText("Device found at 192.168.34.124 - Already Programmed RESETING to 192.168.34.50");
-                                Elements inputElements = doc.getElementsByTag("input");
-                                for (Element inputElement : inputElements) {
-                                    String key = inputElement.attr("name");
-                                    String value = inputElement.attr("value");
-                                    System.out.println("name=" + key + " value=" + value);
-                                    if (key.equals("M2")) {
-                                        lserNum.setText("Serial Number set=" + serialNumber + " Read=" + value);
-                                    }
-                                    if (key.equals("M0")) {
-                                        lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
-                                    }
-                                    if (key.equals("M1")) {
-                                        lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
-                                    }
-                                }
-                                // try to reset device
-                                try {
-                                    doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124/0")
-                                            .data("b", "")
-                                            .timeout(3000)
-                                            .get();
-                                } catch (IOException ex1) {
-                                    errorStatus.setText(" No device at http://ADMIN:admin@192.168.34.124");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-
-                            } catch (IOException ex2) {
-                                device124 = false;
-                                System.out.println("Error reading 124 back box status");
-                                //Exceptions.printStackTrace(ex);
-
-                                try {
-                                    doc = Jsoup.connect("http://192.168.34.50/device.htm").timeout(3000).get();
-                                    device50 = true;
-                                    deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
-                                    Elements inputElements = doc.getElementsByTag("input");
-                                    for (Element inputElement : inputElements) {
-                                        String key = inputElement.attr("name");
-                                        String value = inputElement.attr("value");
-
-                                    }
-
-                                    if (runTest) {
-                                        instructions.setText("Instructions: Running device tests");
-                                        
-                                        // VInsure tester is not running
-                                        try {
-                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                    .timeout(3000)
-                                                    .get();
-                                            deviceStatus.setText("Tester found at 192.168.34.121");
-                                            tester = true;
-                                            Elements input3Elements = doc.getElementsByTag("input");
-                                            for (Element input3Element : input3Elements) {
-                                                String key = input3Element.attr("name");
-                                                String value = input3Element.attr("value");
-                                                System.out.println("name=" + key + " value=" + value);
-                                                if (key.equals("eT")) {
-                                                    if (value.equals("Turn OFF")) {
-                                                        // Start Tester
-                                                        try {
-                                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                                    .data("eT", "Turn OFF")
-                                                                    .timeout(3000)
-                                                                    .get();
-                                                        } catch (IOException ex10) {
-                                                            //Exceptions.printStackTrace(ex);
-                                                            errorStatus.setText("ERROR: Turning Tester OFF");
-                                                        }
-
-                                                    }
-                                                }
-                                            }
-                                        } catch (IOException ex11) {
-                                            //Exceptions.printStackTrace(ex);
-                                            errorStatus.setText("ERROR: Getting Tester run status");
-                                        }
-
-                                        // Set mac on tester
-                                        try {
-                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                    .data("gmac", gigeMAC)
-                                                    .timeout(3000)
-                                                    .get();
-                                        } catch (IOException ex10) {
-                                            //Exceptions.printStackTrace(ex);
-                                            errorStatus.setText("ERROR: setting mac on tester");
-                                        }
-
-                                        // Modify Settings
-                                        try {
-                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                    .data("A0g", "Modify Settings - 2")
-                                                    .timeout(3000)
-                                                    .get();
-                                        } catch (IOException ex10) {
-                                            //Exceptions.printStackTrace(ex);
-                                            errorStatus.setText("ERROR: tester modify settings");
-                                        }
-                                        
-                                        // save and apply changes
-                                        try {
-                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                    .data("esf", "Save and apply changes")
-                                                    .timeout(3000)
-                                                    .get();
-                                        } catch (IOException ex10) {
-                                            //Exceptions.printStackTrace(ex);
-                                            errorStatus.setText("ERROR: tester save and apply changes");
-                                        }
-                                        
-                                        // Verify mac set correctly
-                                        try {
-                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                    .timeout(3000)
-                                                    .get();
-                                            deviceStatus.setText("Tester found at 192.168.34.121");
-                                            tester = true;
-                                            Elements input3Elements = doc.getElementsByTag("input");
-                                            for (Element input3Element : input3Elements) {
-                                                String key = input3Element.attr("name");
-                                                String value = input3Element.attr("value");
-                                                System.out.println("name=" + key + " value=" + value);
-                                                if (key.equals("gmac")) {
-                                                    if (gigeMAC.equals(value)) {
-                                                        testerPresent.setForeground(Color.green);
-                                                    } else {
-                                                        testerPresent.setForeground(Color.red);
-                                                    }
-                                                    testerPresent.setText("Tester Present: GigE MAC=" + value + " set=" + gigeMAC);
-                                                }
-                                            }
-                                        } catch (IOException ex11) {
-                                            //Exceptions.printStackTrace(ex);
-                                            errorStatus.setText("ERROR: tester checking mac address");
-                                        }
-
-                                        // Start Tester
-                                        try {
-                                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                                                    .data("eT", "Turn ON")
-                                                    .timeout(3000)
-                                                    .get();
-                                        } catch (IOException ex10) {
-                                            //Exceptions.printStackTrace(ex);
-                                            errorStatus.setText("ERROR: Starting Tester");
-                                        }
-                                                                                
-                                    } else {
-                                        instructions.setText("Instructions: Hook device up to tester and press Test");
-                                    }
-
-                                } catch (IOException ex3) {
-                                    device50 = true;
-                                    errorStatus.setText("Error reading back box status ip 192.168.34.50");
-                                    //Exceptions.printStackTrace(ex);
-                                }
-                                //Exceptions.printStackTrace(ex);
-                            }
-
-                        }
-                    }
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException ex6) {
-                        //Exceptions.printStackTrace(ex);
                     }
                 }
+                delay(1);
+            }
+            
+            operator.setEnabled(false);
+            SelectFPGA.setEnabled(false);
+            
+            while (true) {
+                instructions.setText("Instructions: Searching for Device");
+                if (connect123()) {
+                    initialize.setEnabled(true);
+                    startTest.setEnabled(false);
+                    instructions.setText("Instructions: Set serial number and initialize");
+                    if (startProgram) {
+                        startProgram = false;
+                        if (saveGige()) {
+                            if (deleteFPGA()) {
+                                if (programFPGA()) {
+                                    delay(10);
+                                    if (saveMaint()) {
+                                        if (!saveSerial()) {
+                                            errorStatus.setText("Error: Failed to program Serial Number");
+                                        }
+                                        resetDevice(123);
+                                    } else {
+                                        errorStatus.setText("Error: Failed to program Maintenance MAC");
+                                    }
+                                } else {
+                                    errorStatus.setText("Error: Failed to program FPGA");
+                                }
+                            } else {
+                                errorStatus.setText("Error: Failed to erase FPGA");
+                            }
+                        } else {
+                            errorStatus.setText("Error: Failed to program GigE MAC");
+                        }
+                    }
+                } else {
+                    initialize.setEnabled(false);
+                    if (connect124()) {
+                        resetDevice(124);
+                    } else {
+                        if (connect50()) {
+                            instructions.setText("Instructions: Connect tester and start test");
+                            startTest.setEnabled(true);
+                            if (runTest) {
+                                instructions.setText("Instructions: Running device tests");
+                                testerOff();
+                                setTesterMAC();
+                                startTester();
+                            } else {
+                                instructions.setText("Instructions: Hook device up to tester and press Test");
+                            }
+                        } else {
+                            startTest.setEnabled(false);
+                        }
+                    }
+                }
+                delay(3);
             }
         }
     }
@@ -888,42 +964,12 @@ public final class initTopComponent extends TopComponent {
     }//GEN-LAST:event_operatorActionPerformed
 
     private void initializeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_initializeActionPerformed
-        // Calculate mac addresses
-        serialNumber = (Integer) serNum.getValue();
-        maintMac = baseMAC + ((serialNumber - 1001) * 2);
-        gigeMac = baseMAC + ((serialNumber - 1001) * 2) + 1;
-        m3 = (maintMac >> 16) & 0x00ff;
-        m2 = (maintMac >> 8) & 0x00ff;
-        m1 = maintMac & 0x00ff;
-        e3 = (gigeMac >> 16) & 0x00ff;
-        e2 = (gigeMac >> 8) & 0x00ff;
-        e1 = gigeMac & 0x00ff;
-        lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02x-%02x-%02x Read=xx-xx-xx-xx-xx-xx", m3, m2, m1));
-        lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=xx-xx-xx-xx-xx-xx", e3, e2, e1));
-        lserNum.setText("Serial Number set=" + serialNumber + " Read=xxxx");
-
-        if (device123) {
-            instructions.setText("Instructions: Programming Check LED sequence");
-            startProgram = true;
-        } else {
-            errorStatus.setText("Error: No device to Program");
-        }
+        setupScreen();
+        startProgram = true;
     }//GEN-LAST:event_initializeActionPerformed
 
     private void serNumStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_serNumStateChanged
-        // Calculate mac addresses
-        serialNumber = (Integer) serNum.getValue();
-        maintMac = baseMAC + ((serialNumber - 1001) * 2);
-        gigeMac = baseMAC + ((serialNumber - 1001) * 2) + 1;
-        m3 = (maintMac >> 16) & 0x00ff;
-        m2 = (maintMac >> 8) & 0x00ff;
-        m1 = maintMac & 0x00ff;
-        e3 = (gigeMac >> 16) & 0x00ff;
-        e2 = (gigeMac >> 8) & 0x00ff;
-        e1 = gigeMac & 0x00ff;
-        lmMAC.setText(String.format("Maintenance MAC set=40-d8-55-%02x-%02x-%02x Read=xx-xx-xx-xx-xx-xx", m3, m2, m1));
-        lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02x-%02x-%02x Read=xx-xx-xx-xx-xx-xx", e3, e2, e1));
-        lserNum.setText("Serial Number set=" + serialNumber + " Read=xxxx");
+        setupScreen();
     }//GEN-LAST:event_serNumStateChanged
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
