@@ -9,7 +9,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.print.PrinterException;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
 import javax.print.attribute.HashPrintRequestAttributeSet;
@@ -21,17 +20,13 @@ import javax.swing.JTextArea;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingWorker;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpVersion;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
-import org.apache.http.entity.mime.content.InputStreamBody;
-import org.apache.http.entity.mime.content.StringBody;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -40,7 +35,6 @@ import org.jsoup.select.Elements;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
-import org.openide.util.Exceptions;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 
@@ -361,18 +355,35 @@ public final class initTopComponent extends TopComponent {
                                 System.out.println("Programming");
 
                                 //program FPGA
-                                MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
-                                //entity.addPart("number", new StringBody("5555555555"));
-                                //entity.addPart("clip", new StringBody("rickroll"));
-                                FileBody fileBody = new FileBody(FPGAfileptr, "application/octet-stream");
-                                entity.addPart("datafile", fileBody);
-                                //entity.addPart("tos", new StringBody("agree"));
+                                CloseableHttpClient httpclient = HttpClients.createDefault();
+                                try {
+                                    HttpPost httppost = new HttpPost("http://ADMIN:admin@192.168.34.123/eS.bin");
 
-                                HttpPost httpPost = new HttpPost("http://ADMIN:admin@192.168.34.123/eS.bin");
-                                httpPost.setEntity(entity);
-                                HttpClient httpClient = new DefaultHttpClient();
-                                HttpResponse response = httpClient.execute(httpPost);
-                                HttpEntity result = response.getEntity();
+                                    FileBody bin = new FileBody(FPGAfileptr, ContentType.APPLICATION_OCTET_STREAM, FPGAfileptr.getName());
+                                    //StringBody comment = new StringBody("A binary file of some kind", ContentType.TEXT_PLAIN);
+
+                                    HttpEntity reqEntity = MultipartEntityBuilder.create()
+                                            .addPart("datafile", bin)
+                                            .build();
+
+                                    httppost.setEntity(reqEntity);
+
+                                    System.out.println("executing request " + httppost.getRequestLine());
+                                    CloseableHttpResponse response = httpclient.execute(httppost);
+                                    try {
+                                        System.out.println("----------------------------------------");
+                                        System.out.println(response.getStatusLine());
+                                        HttpEntity resEntity = response.getEntity();
+                                        if (resEntity != null) {
+                                            System.out.println("Response content length: " + resEntity.getContentLength());
+                                        }
+                                        EntityUtils.consume(resEntity);
+                                    } finally {
+                                        response.close();
+                                    }
+                                } finally {
+                                    httpclient.close();
+                                }
 
                                 System.out.println("Sleeping 10 seconds");
                                 try {
@@ -402,7 +413,7 @@ public final class initTopComponent extends TopComponent {
                                             if (maintMAC.equals(value)) {
                                                 lmMAC.setForeground(Color.green);
                                             } else {
-                                                lmMAC.setForeground(Color.red);                                                
+                                                lmMAC.setForeground(Color.red);
                                             }
                                             lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
                                         }
@@ -415,8 +426,7 @@ public final class initTopComponent extends TopComponent {
                                     //Exceptions.printStackTrace(ex);
                                 }
 
-                                
-                                                                System.out.println("Serial Number");
+                                System.out.println("Serial Number");
 
                                 // Save Serial Number
                                 try {
