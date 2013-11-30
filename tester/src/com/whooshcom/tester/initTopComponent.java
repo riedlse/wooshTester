@@ -634,7 +634,7 @@ public final class initTopComponent extends TopComponent {
                     if (value.equals("Turn OFF")) {
                         // Stop Tester
                         try {
-                            doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
+                            Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                                     .data("eT", "Turn OFF")
                                     .timeout(3000)
                                     .get();
