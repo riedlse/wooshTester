@@ -61,15 +61,6 @@
                           </Group>
                           <EmptySpace max="32767" attributes="0"/>
                       </Group>
-                      <Group type="102" attributes="0">
-                          <Group type="103" groupAlignment="0" attributes="0">
-                              <Component id="errorStatus" min="-2" max="-2" attributes="0"/>
-                              <Component id="instructions" min="-2" max="-2" attributes="0"/>
-                              <Component id="deviceStatus" min="-2" max="-2" attributes="0"/>
-                              <Component id="lgMAC" min="-2" max="-2" attributes="0"/>
-                          </Group>
-                          <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
-                      </Group>
                       <Group type="102" alignment="1" attributes="0">
                           <Group type="103" groupAlignment="0" attributes="0">
                               <Component id="testerPresent" alignment="0" min="-2" max="-2" attributes="0"/>
@@ -93,6 +84,16 @@
                               <Component id="lOper" min="-2" pref="125" max="-2" attributes="0"/>
                           </Group>
                           <EmptySpace min="-2" pref="41" max="-2" attributes="0"/>
+                      </Group>
+                      <Group type="102" attributes="0">
+                          <Group type="103" groupAlignment="0" attributes="0">
+                              <Component id="programFPGA" min="-2" max="-2" attributes="0"/>
+                              <Component id="errorStatus" min="-2" max="-2" attributes="0"/>
+                              <Component id="instructions" min="-2" max="-2" attributes="0"/>
+                              <Component id="deviceStatus" min="-2" max="-2" attributes="0"/>
+                              <Component id="lgMAC" min="-2" max="-2" attributes="0"/>
+                          </Group>
+                          <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
                       </Group>
                   </Group>
               </Group>
@@ -127,7 +128,9 @@
                   <Component id="instructions" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="errorStatus" min="-2" max="-2" attributes="0"/>
-                  <EmptySpace pref="37" max="32767" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="programFPGA" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="32767" attributes="0"/>
                   <Group type="103" groupAlignment="0" attributes="0">
                       <Group type="102" alignment="1" attributes="0">
                           <Component id="printit" min="-2" max="-2" attributes="0"/>
@@ -294,6 +297,16 @@
               <ResourceString bundle="com/whooshcom/tester/Bundle.properties" key="initTopComponent.FPGAfile.text" replaceFormat="org.openide.util.NbBundle.getMessage({sourceFileName}.class, &quot;{key}&quot;)"/>
             </Property>
           </Properties>
+        </Component>
+        <Component class="javax.swing.JButton" name="programFPGA">
+          <Properties>
+            <Property name="text" type="java.lang.String" editor="org.netbeans.modules.i18n.form.FormI18nStringEditor">
+              <ResourceString bundle="com/whooshcom/tester/Bundle.properties" key="initTopComponent.programFPGA.text" replaceFormat="org.openide.util.NbBundle.getMessage({sourceFileName}.class, &quot;{key}&quot;)"/>
+            </Property>
+          </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="programFPGAActionPerformed"/>
+          </Events>
         </Component>
       </SubComponents>
     </Container>

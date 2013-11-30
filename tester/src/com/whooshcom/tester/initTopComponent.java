@@ -82,6 +82,7 @@ public final class initTopComponent extends TopComponent {
     public static JTextArea ptext;
     private static boolean startProgram = false;
     private static boolean runTest = false;
+    private static boolean stopTest = false;
     private final String useFont = "Consolas";
     private final int baseMAC = 0x0A5000;
     private int serialNumber;
@@ -321,6 +322,30 @@ public final class initTopComponent extends TopComponent {
         return (true);
     }
 
+    private boolean checkFail() {
+        System.out.println("Trying to connect to tester at http://192.168.34.121/XML_state.htm");
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/XML_state.htm").timeout(3000).get();
+            //Element link = doc.select("state").first();
+            String state = doc.body().text();
+            System.out.println("State=" + state);
+            if (state.equalsIgnoreCase("failed")) {
+                errorStatus.setText("ERROR: Device Failed Test");
+                testerPresent.setForeground(Color.red);
+                testerPresent.setText("Tester Present: FAILED");
+                return (false);
+            } else {
+                testerPresent.setForeground(Color.green);
+                testerPresent.setText("Tester Present: TESTING");
+            }
+        } catch (IOException ex) {
+            //Exceptions.printStackTrace(ex);
+            errorStatus.setText("ERROR: No Tester Present");
+            return (false);
+        }
+        return (true);
+    }
+    
     private boolean programFPGA() {
         boolean rc = true;
         System.out.println("Programming FPGA with " + FPGAfileptr.getName());
@@ -603,11 +628,40 @@ public final class initTopComponent extends TopComponent {
     private boolean connect50() {
         try {
             Document doc = Jsoup.connect("http://192.168.34.50/device.htm").timeout(3000).get();
-            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
-            Elements inputElements = doc.getElementsByTag("input");
+            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Device");
+            //String Serial = Jsoup.parse(doc).select("tr:matchesOwn(Serial Number)").first().nextSibling().toString());
+            Elements inputElements = doc.getElementsByTag("tr");
             for (Element inputElement : inputElements) {
                 String key = inputElement.attr("name");
                 String value = inputElement.attr("value");
+                String text = inputElement.attr("text");
+                System.out.println("name=" + key + " value=" + value + " text=" + text);
+
+            }
+            Document doc1 = Jsoup.connect("http://192.168.34.50/mNetwork.htm").timeout(3000).get();
+            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Maint");
+            Elements inputElements1 = doc1.getElementsByTag("input");
+            for (Element inputElement : inputElements1) {
+                String key = inputElement.attr("name");
+                String value = inputElement.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (value.contains("40-d8-55")) {
+                    lmMAC.setText(String.format("Maintenance MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, m3, m2, m1));
+                    System.out.println("Maint MAC=" + value);
+                }
+            }
+            Document doc2 = Jsoup.connect("http://192.168.34.50/tStream.htm").timeout(3000).get();
+            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Maint");
+            Elements inputElements2 = doc2.getElementsByTag("input");
+            for (Element inputElement : inputElements2) {
+                String key = inputElement.attr("name");
+                String value = inputElement.attr("value");
+                System.out.println("name=" + key + " value=" + value);
+                if (value.contains("40-d8-55")) {
+                    lgMAC.setText(String.format("GigE MAC set=40-D8-55-%02X-%02X-%02X Read=" + value, e3, e2, e1));
+                    System.out.println("GigE MAC=" + value);
+                    gigeMAC = value;
+                }
 
             }
         } catch (IOException ex3) {
@@ -683,10 +737,10 @@ public final class initTopComponent extends TopComponent {
             
             operator.setEnabled(false);
             SelectFPGA.setEnabled(false);
-            
+
             while (true) {
                 instructions.setText("Instructions: Searching for Device");
-                if (connect123()) {
+                while (connect123()) {
                     initialize.setEnabled(true);
                     startTest.setEnabled(false);
                     instructions.setText("Instructions: Set serial number and initialize");
@@ -714,27 +768,39 @@ public final class initTopComponent extends TopComponent {
                             errorStatus.setText("Error: Failed to program GigE MAC");
                         }
                     }
-                } else {
-                    initialize.setEnabled(false);
-                    if (connect124()) {
-                        resetDevice(124);
-                    } else {
-                        if (connect50()) {
-                            instructions.setText("Instructions: Connect tester and start test");
-                            startTest.setEnabled(true);
-                            if (runTest) {
-                                instructions.setText("Instructions: Running device tests");
-                                testerOff();
-                                setTesterMAC();
-                                startTester();
-                            } else {
-                                instructions.setText("Instructions: Hook device up to tester and press Test");
-                            }
-                        } else {
-                            startTest.setEnabled(false);
-                        }
-                    }
+                    delay(3);
                 }
+                initialize.setEnabled(false);
+                while (connect124()) {
+                    resetDevice(124);
+                    delay(3);
+                }
+                while (connect50()) {
+                    instructions.setText("Instructions: Connect tester and start test");
+                    startTest.setEnabled(true);
+                    if (runTest) {
+                        runTest = false;
+                        startTest.setText("Stop Test");
+                        instructions.setText("Instructions: Running device tests");
+                        testerOff();
+                        setTesterMAC();
+                        startTester();
+                        boolean failed = false;
+                        while (!failed || !stopTest) {
+                            failed = checkFail();
+                            delay(3);
+                        }
+                        stopTest = false;
+                        testerOff();
+                        instructions.setText("Instructions: Hook device up to tester and press Test");
+                        startTest.setText("Start Test");
+                    } else {
+                        instructions.setText("Instructions: Hook device up to tester and press Test");
+                        startTest.setText("Start Test");
+                    }
+                    delay(3);
+                }
+                startTest.setEnabled(false);
                 delay(3);
             }
         }
@@ -767,6 +833,7 @@ public final class initTopComponent extends TopComponent {
         testerPresent = new javax.swing.JLabel();
         SelectFPGA = new javax.swing.JButton();
         FPGAfile = new javax.swing.JLabel();
+        programFPGA = new javax.swing.JButton();
 
         serNum.addChangeListener(new javax.swing.event.ChangeListener() {
             public void stateChanged(javax.swing.event.ChangeEvent evt) {
@@ -838,6 +905,13 @@ public final class initTopComponent extends TopComponent {
 
         org.openide.awt.Mnemonics.setLocalizedText(FPGAfile, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.FPGAfile.text")); // NOI18N
 
+        org.openide.awt.Mnemonics.setLocalizedText(programFPGA, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.programFPGA.text")); // NOI18N
+        programFPGA.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                programFPGAActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -857,13 +931,6 @@ public final class initTopComponent extends TopComponent {
                             .addComponent(lmMAC)
                             .addComponent(lserNum))
                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(errorStatus)
-                            .addComponent(instructions)
-                            .addComponent(deviceStatus)
-                            .addComponent(lgMAC))
-                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(testerPresent)
@@ -882,7 +949,15 @@ public final class initTopComponent extends TopComponent {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(operator, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addComponent(lOper, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(41, 41, 41))))
+                        .addGap(41, 41, 41))
+                    .addGroup(jPanel1Layout.createSequentialGroup()
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(programFPGA)
+                            .addComponent(errorStatus)
+                            .addComponent(instructions)
+                            .addComponent(deviceStatus)
+                            .addComponent(lgMAC))
+                        .addGap(0, 0, Short.MAX_VALUE))))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -911,7 +986,9 @@ public final class initTopComponent extends TopComponent {
                 .addComponent(instructions)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(errorStatus)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 37, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(programFPGA)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(printit)
@@ -956,7 +1033,15 @@ public final class initTopComponent extends TopComponent {
     }//GEN-LAST:event_printitActionPerformed
 
     private void startTestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startTestActionPerformed
-        runTest = true;
+        if (startTest.getText().equals("Start Test")) {
+            runTest = true;
+            stopTest = false;
+            startTest.setText("Stop Test");
+        } else {
+            stopTest = true;
+            runTest = false;
+            startTest.setText("Start Test");
+        }
     }//GEN-LAST:event_startTestActionPerformed
 
     private void operatorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_operatorActionPerformed
@@ -971,6 +1056,23 @@ public final class initTopComponent extends TopComponent {
     private void serNumStateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_serNumStateChanged
         setupScreen();
     }//GEN-LAST:event_serNumStateChanged
+
+    private void programFPGAActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_programFPGAActionPerformed
+        if (connect123()) {
+            if (deleteFPGA()) {
+                if (programFPGA()) {
+                    delay(10);
+                    resetDevice(123);
+                } else {
+                    errorStatus.setText("Error: Failed to program FPGA");
+                }
+            } else {
+                errorStatus.setText("Error: Failed to erase FPGA");
+            }
+        } else {
+            errorStatus.setText("Error: Device must be at .123 IP to program FPGA");
+        }
+    }//GEN-LAST:event_programFPGAActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel FPGAfile;
@@ -989,6 +1091,7 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JLabel lserNum;
     private javax.swing.JTextField operator;
     private javax.swing.JButton printit;
+    private javax.swing.JButton programFPGA;
     private javax.swing.JSpinner serNum;
     private javax.swing.JButton startTest;
     private javax.swing.JLabel testerPresent;
