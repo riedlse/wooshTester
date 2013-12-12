@@ -72,6 +72,20 @@ import org.openide.util.NbBundle.Messages;
 })
 public final class initTopComponent extends TopComponent {
 
+    public class device {
+        String serialNumber;
+        String date;
+        String operator;
+        String boot;
+        String code;
+        String flash;
+        String security;
+        String Dthing;
+        String comment;
+    }
+    
+    public device[] dev = new device[8192];
+    
     public static String csvFileToRead = System.getProperty("user.home") + "/CSX1641.csv";
     public static String printText = " ";
     public static String FPGAfilename = " ";
@@ -104,6 +118,7 @@ public final class initTopComponent extends TopComponent {
     private int e3;
     private int e2;
     private int e1;
+    private static int lastSerial = 0;
 
     public initTopComponent() {
                
@@ -112,15 +127,17 @@ public final class initTopComponent extends TopComponent {
         setToolTipText(Bundle.HINT_initTopComponent());
         putClientProperty(TopComponent.PROP_CLOSING_DISABLED, Boolean.TRUE);
         putClientProperty(TopComponent.PROP_UNDOCKING_DISABLED, Boolean.TRUE);
- 
-        long oor = System.currentTimeMillis();
-        try {
-            System.setErr(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "error_" + oor + ".txt")));
-            System.setOut(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "output_" + oor + ".txt")));
-        } catch (FileNotFoundException ex) {
-            Exceptions.printStackTrace(ex);
-        }
 
+        long oor = System.currentTimeMillis();
+        if (false) {
+            try {
+                System.setErr(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "error_" + oor + ".txt")));
+                System.setOut(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "output_" + oor + ".txt")));
+            } catch (FileNotFoundException ex) {
+                Exceptions.printStackTrace(ex);
+            }
+        }
+        
         System.out.println("WooshCom CSX-1641 Test v" + 1 + "." + 0 + "." + 0 + " (c)2013 Bruce Marler");
         System.out.println(System.getProperty("java.version") + " " + System.getProperty("sun.arch.data.model") + " bit");
         System.out.println(System.getProperty("java.vm.name"));
@@ -133,9 +150,9 @@ public final class initTopComponent extends TopComponent {
         ptext.setColumns(130);
         ptext.setRows(100);
         
-        //readCsv();
+        readCsv();
         int minSerNum = 1001;
-        SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(1201, minSerNum, minSerNum + 0x0fff, 1);
+        SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(lastSerial+1, minSerNum, minSerNum + 0x0fff, 1);
         serNum.setModel(spinnerNumberModel);
         
         Thread t = new Thread(new ExecTest());
@@ -143,6 +160,7 @@ public final class initTopComponent extends TopComponent {
     }
     
     public void readCsv() {
+        int sn = 0;
         BufferedReader br = null;
         String line = "";
         String splitBy = ",";
@@ -151,33 +169,49 @@ public final class initTopComponent extends TopComponent {
             br = new BufferedReader(new FileReader(csvFileToRead));
             while ((line = br.readLine()) != null) {
                 String[] csx = line.split(splitBy);
+                int num = csx.length;
+                if (num > 0) {
+                   sn = Integer.parseInt(csx[0]);
+                   if (sn > lastSerial) {
+                       lastSerial = sn;
+                   }
+                    dev[sn] = new device();
+                } else {
+                    sn = 0;
+                }
+                System.out.println("got " + num);
                 String prcsx = "";
-                if (csx[0] != null) {
-                    prcsx += "CSX1641 [Serial= " + csx[0];
-                }
-                if (csx[1] != null) {
-                    prcsx += " , date=" + csx[1];
-                }
-                if (csx[2] != null) {
-                    prcsx += " , operator=" + csx[2];
-                }
-                if (csx[3] != null) {
-                    prcsx += " , boot=" + csx[3];
-                }
-                if (csx[4] != null) {
-                    prcsx += " , code=" + csx[4];
-                }
-                if (csx[5] != null) {
-                    prcsx += " , flash=" + csx[5];
-                }
-                if (csx[6] != null) {
-                    prcsx += " , Security=" + csx[6];
-                }
-                if (csx[7] != null) {
-                    prcsx += " , something=" + csx[7];
-                }
-                if (csx[8] != null) {
-                    prcsx += " , comments=" + csx[8];
+                switch (num) {
+                    case 11:
+                    case 10:
+                    case 9:
+                        prcsx += " , comments=" + csx[8];
+                        dev[sn].comment = csx[8];
+                    case 8:
+                        prcsx = " , something=" + csx[7] + prcsx;
+                        dev[sn].Dthing = csx[7];
+                    case 7:
+                        prcsx = " , Security=" + csx[6] + prcsx;
+                        dev[sn].security = csx[6];
+                    case 6:
+                        prcsx = " , flash=" + csx[5] + prcsx;
+                        dev[sn].flash = csx[5];
+                    case 5:
+                        prcsx = " , code=" + csx[4] + prcsx;
+                        dev[sn].code = csx[4];
+                    case 4:
+                        prcsx = " , boot=" + csx[3] + prcsx;
+                        dev[sn].boot = csx[3];
+                    case 3:
+                        prcsx = " , operator=" + csx[2] + prcsx;
+                        dev[sn].operator = csx[2];
+                    case 2:
+                        prcsx = " , date=" + csx[1] + prcsx;
+                        dev[sn].date = csx[1];
+                    case 1:
+                        prcsx = "CSX1641 [Serial= " + csx[0] + prcsx;
+                        break;
+                    case 0:
                 }
                 System.out.println(prcsx + "]");
             }
