@@ -8,8 +8,15 @@ package com.wooshcom.tester;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.print.PrinterException;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.text.MessageFormat;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
@@ -35,6 +42,7 @@ import org.jsoup.select.Elements;
 import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
+import org.openide.util.Exceptions;
 import org.openide.windows.TopComponent;
 import org.openide.util.NbBundle.Messages;
 
@@ -64,6 +72,7 @@ import org.openide.util.NbBundle.Messages;
 })
 public final class initTopComponent extends TopComponent {
 
+    public static String csvFileToRead = System.getProperty("user.home") + "/CSX1641.csv";
     public static String printText = " ";
     public static String FPGAfilename = " ";
     public File FPGAfileptr;
@@ -85,6 +94,7 @@ public final class initTopComponent extends TopComponent {
     private static boolean stopTest = false;
     private final String useFont = "Consolas";
     private final int baseMAC = 0x0A5000;
+    private final int getTimeout = 1000;
     private int serialNumber;
     private int maintMac;
     private int gigeMac;
@@ -102,7 +112,20 @@ public final class initTopComponent extends TopComponent {
         setToolTipText(Bundle.HINT_initTopComponent());
         putClientProperty(TopComponent.PROP_CLOSING_DISABLED, Boolean.TRUE);
         putClientProperty(TopComponent.PROP_UNDOCKING_DISABLED, Boolean.TRUE);
+ 
+        long oor = System.currentTimeMillis();
+        try {
+            System.setErr(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "error_" + oor + ".txt")));
+            System.setOut(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "output_" + oor + ".txt")));
+        } catch (FileNotFoundException ex) {
+            Exceptions.printStackTrace(ex);
+        }
 
+        System.out.println("WooshCom CSX-1641 Test v" + 1 + "." + 0 + "." + 0 + " (c)2013 Bruce Marler");
+        System.out.println(System.getProperty("java.version") + " " + System.getProperty("sun.arch.data.model") + " bit");
+        System.out.println(System.getProperty("java.vm.name"));
+        System.out.printf("Current System Time=0x%08x dec=%d\n", oor, oor);
+  
         // create a blind text area for the print function to use.
         ptext = new javax.swing.JTextArea();
         ptext.setLineWrap(true);
@@ -110,11 +133,86 @@ public final class initTopComponent extends TopComponent {
         ptext.setColumns(130);
         ptext.setRows(100);
         
-        SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(1201, 1001, 2000, 1);
+        //readCsv();
+        int minSerNum = 1001;
+        SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(1201, minSerNum, minSerNum + 0x0fff, 1);
         serNum.setModel(spinnerNumberModel);
         
         Thread t = new Thread(new ExecTest());
         t.start();  
+    }
+    
+    public void readCsv() {
+        BufferedReader br = null;
+        String line = "";
+        String splitBy = ",";
+        try {
+
+            br = new BufferedReader(new FileReader(csvFileToRead));
+            while ((line = br.readLine()) != null) {
+                String[] csx = line.split(splitBy);
+                String prcsx = "";
+                if (csx[0] != null) {
+                    prcsx += "CSX1641 [Serial= " + csx[0];
+                }
+                if (csx[1] != null) {
+                    prcsx += " , date=" + csx[1];
+                }
+                if (csx[2] != null) {
+                    prcsx += " , operator=" + csx[2];
+                }
+                if (csx[3] != null) {
+                    prcsx += " , boot=" + csx[3];
+                }
+                if (csx[4] != null) {
+                    prcsx += " , code=" + csx[4];
+                }
+                if (csx[5] != null) {
+                    prcsx += " , flash=" + csx[5];
+                }
+                if (csx[6] != null) {
+                    prcsx += " , Security=" + csx[6];
+                }
+                if (csx[7] != null) {
+                    prcsx += " , something=" + csx[7];
+                }
+                if (csx[8] != null) {
+                    prcsx += " , comments=" + csx[8];
+                }
+                System.out.println(prcsx + "]");
+            }
+        } catch (FileNotFoundException ex) {
+            //Exceptions.printStackTrace(ex);
+            System.out.println("File does not exist, it will be created - " + csvFileToRead);
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+
+            }
+        }
+    }
+  
+    public void appendCsv() {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter( new FileWriter( csvFileToRead , true ) );
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            }
+        }
     }
     
     private void message(boolean error, String msg) {
@@ -130,7 +228,7 @@ public final class initTopComponent extends TopComponent {
         printText += lgMAC.getText() + "\n";
              
         MessageFormat header = new MessageFormat(" Whooshcom Production Test Follower");
-        MessageFormat footer = new MessageFormat("Whooshcom Test Automation v" + 1 + "." + 0 + "." + 0 + "          Page - {0}");
+        MessageFormat footer = new MessageFormat(" " +  "          Page - {0}");
         ptext.setText(printText);
         PrintingTask task = new PrintingTask(header, footer);
         task.execute();
@@ -185,7 +283,7 @@ public final class initTopComponent extends TopComponent {
         System.out.println("Trying to connect to device at http://192.168.34.123");
         try {
             // try to connect to device
-            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123").timeout(3000).get();
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123").timeout(getTimeout).get();
             deviceStatus.setText("Device found at 192.168.34.123 - Ready to program");
             Elements inputElements = doc.getElementsByTag("input");
             for (Element inputElement : inputElements) {
@@ -219,7 +317,7 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
                     .data("d", " DeleteFPGA code")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
         } catch (IOException ex) {
             errorStatus.setText("Error deleting FPGA code");
@@ -233,7 +331,7 @@ public final class initTopComponent extends TopComponent {
             // delete FPGA code
             try {
                 Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123")
-                        .timeout(3000)
+                        .timeout(getTimeout)
                         .get();
                 System.out.println("Erasing");
                 Elements eraseElements = doc.getElementsByTag("input");
@@ -268,7 +366,7 @@ public final class initTopComponent extends TopComponent {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
                     .data("r", "Save-MAC-(GIG-E)")
                     .data("M1", sgigeMAC)
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
             Elements inputgElements = doc.getElementsByTag("input");
             for (Element inputgElement : inputgElements) {
@@ -302,7 +400,7 @@ public final class initTopComponent extends TopComponent {
     private boolean connectTester() {
         System.out.println("Trying to connect to tester at http://192.168.34.121/Tester.htm");
         try {
-            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm").timeout(3000).get();
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm").timeout(getTimeout).get();
             deviceStatus.setText("Tester found at 192.168.34.121");
             Elements inputElements = doc.getElementsByTag("input");
             for (Element inputElement : inputElements) {
@@ -325,7 +423,7 @@ public final class initTopComponent extends TopComponent {
     private boolean checkFail() {
         System.out.println("Trying to connect to tester at http://192.168.34.121/XML_state.htm");
         try {
-            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/XML_state.htm").timeout(3000).get();
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/XML_state.htm").timeout(getTimeout).get();
             //Element link = doc.select("state").first();
             String state = doc.body().text();
             System.out.println("State=" + state);
@@ -398,7 +496,7 @@ public final class initTopComponent extends TopComponent {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
                     .data("r", "Save-MAC-(maintenance)")
                     .data("M0", smaintMAC)
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
             Elements inputgElements = doc.getElementsByTag("input");
             for (Element inputgElement : inputgElements) {
@@ -438,7 +536,7 @@ public final class initTopComponent extends TopComponent {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.123/webpage.html")
                     .data("r", "Save-S/N")
                     .data("M2", sserialNumber)
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
             Elements inputgElements = doc.getElementsByTag("input");
             for (Element inputgElement : inputgElements) {
@@ -475,7 +573,7 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                     .data("eT", "Turn ON")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
         } catch (IOException ex10) {
             //Exceptions.printStackTrace(ex);
@@ -491,7 +589,7 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                     .data("gmac", gigeMAC)
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
         } catch (IOException ex10) {
             //Exceptions.printStackTrace(ex);
@@ -503,7 +601,7 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                     .data("A0g", "Modify Settings - 2")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
         } catch (IOException ex10) {
             //Exceptions.printStackTrace(ex);
@@ -515,7 +613,7 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                     .data("esf", "Save and apply changes")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
         } catch (IOException ex10) {
             //Exceptions.printStackTrace(ex);
@@ -526,7 +624,7 @@ public final class initTopComponent extends TopComponent {
         // Verify mac set correctly
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
             deviceStatus.setText("Tester found at 192.168.34.121");
             Elements input3Elements = doc.getElementsByTag("input");
@@ -575,7 +673,7 @@ public final class initTopComponent extends TopComponent {
     }
 
     private void delay(long seconds) {
-        System.out.println("Sleeping " + seconds + " seconds");
+        //System.out.println("Sleeping " + seconds + " seconds");
         try {
             Thread.sleep(seconds * 1000);
         } catch (InterruptedException ex6) {
@@ -589,7 +687,7 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34." + lastOctet + "/0")
                     .data("b", "")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
         } catch (IOException ex1) {
             errorStatus.setText("Error resetting device at http://ADMIN:admin@192.168.34.123");
@@ -600,7 +698,7 @@ public final class initTopComponent extends TopComponent {
     private boolean connect124() {
         // try to read back device status
         try {
-            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124").timeout(3000).get();
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.124").timeout(getTimeout).get();
             deviceStatus.setText("Device found at 192.168.34.124 - Already Programmed RESETING to 192.168.34.50");
             Elements inputElements = doc.getElementsByTag("input");
             for (Element inputElement : inputElements) {
@@ -627,7 +725,7 @@ public final class initTopComponent extends TopComponent {
 
     private boolean connect50() {
         try {
-            Document doc = Jsoup.connect("http://192.168.34.50/device.htm").timeout(3000).get();
+            Document doc = Jsoup.connect("http://192.168.34.50/device.htm").timeout(getTimeout).get();
             deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Device");
             //String Serial = Jsoup.parse(doc).select("tr:matchesOwn(Serial Number)").first().nextSibling().toString());
             Elements inputElements = doc.getElementsByTag("tr");
@@ -638,7 +736,7 @@ public final class initTopComponent extends TopComponent {
                 System.out.println("name=" + key + " value=" + value + " text=" + text);
 
             }
-            Document doc1 = Jsoup.connect("http://192.168.34.50/mNetwork.htm").timeout(3000).get();
+            Document doc1 = Jsoup.connect("http://192.168.34.50/mNetwork.htm").timeout(getTimeout).get();
             deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Maint");
             Elements inputElements1 = doc1.getElementsByTag("input");
             for (Element inputElement : inputElements1) {
@@ -650,7 +748,7 @@ public final class initTopComponent extends TopComponent {
                     System.out.println("Maint MAC=" + value);
                 }
             }
-            Document doc2 = Jsoup.connect("http://192.168.34.50/tStream.htm").timeout(3000).get();
+            Document doc2 = Jsoup.connect("http://192.168.34.50/tStream.htm").timeout(getTimeout).get();
             deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Maint");
             Elements inputElements2 = doc2.getElementsByTag("input");
             for (Element inputElement : inputElements2) {
@@ -676,7 +774,7 @@ public final class initTopComponent extends TopComponent {
         // VInsure tester is not running
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
-                    .timeout(3000)
+                    .timeout(getTimeout)
                     .get();
             deviceStatus.setText("Tester found at 192.168.34.121");
             Elements input3Elements = doc.getElementsByTag("input");
@@ -749,7 +847,6 @@ public final class initTopComponent extends TopComponent {
                         if (saveGige()) {
                             if (deleteFPGA()) {
                                 if (programFPGA()) {
-                                    delay(10);
                                     if (saveMaint()) {
                                         if (!saveSerial()) {
                                             errorStatus.setText("Error: Failed to program Serial Number");
@@ -768,12 +865,12 @@ public final class initTopComponent extends TopComponent {
                             errorStatus.setText("Error: Failed to program GigE MAC");
                         }
                     }
-                    delay(3);
+                    delay(1);
                 }
                 initialize.setEnabled(false);
                 while (connect124()) {
                     resetDevice(124);
-                    delay(3);
+                    delay(1);
                 }
                 while (connect50()) {
                     instructions.setText("Instructions: Connect tester and start test");
@@ -788,7 +885,7 @@ public final class initTopComponent extends TopComponent {
                         boolean failed = false;
                         while (!failed || !stopTest) {
                             failed = checkFail();
-                            delay(3);
+                            delay(1);
                         }
                         stopTest = false;
                         testerOff();
@@ -798,10 +895,10 @@ public final class initTopComponent extends TopComponent {
                         instructions.setText("Instructions: Hook device up to tester and press Test");
                         startTest.setText("Start Test");
                     }
-                    delay(3);
+                    delay(1);
                 }
                 startTest.setEnabled(false);
-                delay(3);
+                delay(1);
             }
         }
     }
