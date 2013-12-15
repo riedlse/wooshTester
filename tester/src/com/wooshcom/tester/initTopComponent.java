@@ -18,6 +18,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.OrientationRequested;
@@ -95,6 +97,22 @@ public final class initTopComponent extends TopComponent {
     public static String smaintMAC = "";
     public static String sgigeMAC = "";
     public static String sserialNumber = "";
+    public static String boot = "boot";
+    public static String code= "code";
+    public static String flash = "flash";
+    public static boolean cbsn;
+    public static boolean cbmn1;
+    public static boolean cbmn2;
+    public static boolean cbgein;
+    public static boolean cbgeout;
+    public static boolean cbredpwr;
+    public static boolean cbredfault;
+    public static boolean cbredrestore;
+    public static boolean cbgreen;
+    public static boolean cbasi1;
+    public static boolean cbasi2;
+    public static boolean cbasi3;
+    public static boolean cbasi4;
     public boolean FPGAselected = false;
     public boolean prReady = false;
     public String errorMessage = "";
@@ -175,7 +193,7 @@ public final class initTopComponent extends TopComponent {
                    if (sn > lastSerial) {
                        lastSerial = sn;
                    }
-                    dev[sn] = new device();
+                   dev[sn] = new device();
                 } else {
                     sn = 0;
                 }
@@ -236,6 +254,12 @@ public final class initTopComponent extends TopComponent {
         BufferedWriter writer = null;
         try {
             writer = new BufferedWriter( new FileWriter( csvFileToRead , true ) );
+            int sn = serialNumber;
+            dev[sn] = new device();
+            String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
+            writer.write(sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
+            + "security" + "," + "Dsomething" + "," + "comments" + "\n");
+            writer.close();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         } finally {
@@ -284,9 +308,6 @@ public final class initTopComponent extends TopComponent {
         protected Object doInBackground() {
             try {
                 PrintRequestAttributeSet aset = new HashPrintRequestAttributeSet();
-                //aset.add(new Copies(5));
-                //aset.add(MediaSize.A4);
-                //aset.add(Sides.DUPLEX);
                
                 aset.add(OrientationRequested.PORTRAIT);
                 complete = ptext.print(headerFormat, footerFormat, printDialog, null, aset, printInteractive);
@@ -846,6 +867,16 @@ public final class initTopComponent extends TopComponent {
         @Override
         public void run() {
             setupScreen();
+            cbsn = false;
+            SNmatch.setSelected(false);
+            SNmatch.setEnabled(false);
+            mngmnt1.setEnabled(false);
+            mngmnt2.setEnabled(false);
+            FPGALED.setVisible(false);
+            ASILED.setVisible(false);
+            gigeIn.setEnabled(false);
+            gigeOut.setEnabled(false);
+            printit.setEnabled(false);
             boolean setupDone = false;
             while (!setupDone) {
                 oper = operator.getText();
@@ -871,32 +902,70 @@ public final class initTopComponent extends TopComponent {
             SelectFPGA.setEnabled(false);
 
             while (true) {
+                SNmatch.setEnabled(true);
                 instructions.setText("Instructions: Searching for Device");
                 while (connect123()) {
+                    errorStatus.setText("Error:");
+                    errorStatus.setForeground(Color.green);
                     initialize.setEnabled(true);
                     startTest.setEnabled(false);
-                    instructions.setText("Instructions: Set serial number and initialize");
+                    mngmnt1.setEnabled(true);
+                    mngmnt2.setEnabled(true);
+                    printit.setEnabled(true);
+                    instructions.setText("Instructions: Check serial numbers, Manamgement port LEDs and click Initialize");
+                    cbmn1 = false;
+                    mngmnt1.setSelected(false);
+                    cbmn2 = false;
+                    mngmnt2.setSelected(false);
                     if (startProgram) {
                         startProgram = false;
+                        cbgein = false;
+                        gigeIn.setSelected(false);
+                        cbgeout = false;
+                        gigeOut.setSelected(false);
+                        cbredpwr = false;
+                        RedPwr.setSelected(false);
+                        cbredfault = false;
+                        redAlarm.setSelected(false);
+                        cbredrestore = false;
+                        redRestore.setSelected(false);
+                        cbgreen = false;
+                        greenPwr.setSelected(false);
+                        cbasi1 = false;
+                        ASI1.setSelected(false);
+                        cbasi2 = false;
+                        ASI2.setSelected(false);
+                        cbasi3 = false;
+                        ASI3.setSelected(false);
+                        cbasi4 = false;
+                        ASI4.setSelected(false);
+
                         if (saveGige()) {
+                            FPGALED.setVisible(true);
+                            instructions.setText("Instructions: Check LED sequence");
                             if (deleteFPGA()) {
                                 if (programFPGA()) {
                                     if (saveMaint()) {
                                         if (!saveSerial()) {
                                             errorStatus.setText("Error: Failed to program Serial Number");
+                                            errorStatus.setForeground(Color.red);
                                         }
                                         resetDevice(123);
                                     } else {
                                         errorStatus.setText("Error: Failed to program Maintenance MAC");
+                                        errorStatus.setForeground(Color.red);
                                     }
                                 } else {
                                     errorStatus.setText("Error: Failed to program FPGA");
+                                    errorStatus.setForeground(Color.red);
                                 }
                             } else {
                                 errorStatus.setText("Error: Failed to erase FPGA");
+                                errorStatus.setForeground(Color.red);
                             }
                         } else {
                             errorStatus.setText("Error: Failed to program GigE MAC");
+                            errorStatus.setForeground(Color.red);
                         }
                     }
                     delay(1);
@@ -907,24 +976,50 @@ public final class initTopComponent extends TopComponent {
                     delay(1);
                 }
                 while (connect50()) {
+                    // TODO need to get code revisions off this screen, somehow....
+                    errorStatus.setText("Error:");
+                    errorStatus.setForeground(Color.green);
                     instructions.setText("Instructions: Connect tester and start test");
                     startTest.setEnabled(true);
                     if (runTest) {
+                        ASILED.setVisible(true);
+                        gigeIn.setEnabled(true);
+                        gigeOut.setEnabled(true);
                         runTest = false;
                         startTest.setText("Stop Test");
-                        instructions.setText("Instructions: Running device tests");
                         testerOff();
                         setTesterMAC();
                         startTester();
+                        instructions.setText("Instructions: Verify ASI and GigE LEDs");
                         boolean failed = false;
                         while (!failed || !stopTest) {
                             failed = checkFail();
                             delay(1);
                         }
                         stopTest = false;
-                        testerOff();
-                        instructions.setText("Instructions: Hook device up to tester and press Test");
                         startTest.setText("Start Test");
+                        testerOff();
+                        if (failed) {
+                            instructions.setText("Instructions: Test Failed");
+                            errorStatus.setText("Error: Test Failed");
+                            errorStatus.setForeground(Color.red);
+                        } else {
+                            if (cbsn && cbmn1 && cbmn2 && cbgein && cbgeout
+                                    && cbredpwr && cbredfault && cbredrestore && cbgreen
+                                    && cbasi1 && cbasi2 && cbasi3 && cbasi4) {
+                                appendCsv();
+                                print();
+                                cbsn = false;
+                                SNmatch.setSelected(false);
+                                FPGALED.setVisible(false);
+                                ASILED.setVisible(false);
+                                gigeIn.setEnabled(false);
+                                gigeOut.setEnabled(false);
+
+                            } else {
+                                instructions.setText("Instructions: Check all LEDs and Print results");
+                            }
+                        }
                     } else {
                         instructions.setText("Instructions: Hook device up to tester and press Test");
                         startTest.setText("Start Test");
@@ -969,22 +1064,22 @@ public final class initTopComponent extends TopComponent {
         serNum = new javax.swing.JSpinner();
         jLabel2 = new javax.swing.JLabel();
         jPanel5 = new javax.swing.JPanel();
-        jCheckBox1 = new javax.swing.JCheckBox();
-        jPanel6 = new javax.swing.JPanel();
-        jCheckBox7 = new javax.swing.JCheckBox();
-        jCheckBox6 = new javax.swing.JCheckBox();
-        jCheckBox9 = new javax.swing.JCheckBox();
-        jCheckBox8 = new javax.swing.JCheckBox();
-        jPanel7 = new javax.swing.JPanel();
-        jCheckBox10 = new javax.swing.JCheckBox();
-        jCheckBox12 = new javax.swing.JCheckBox();
-        jCheckBox13 = new javax.swing.JCheckBox();
-        jCheckBox11 = new javax.swing.JCheckBox();
-        jPanel8 = new javax.swing.JPanel();
-        jCheckBox2 = new javax.swing.JCheckBox();
-        jCheckBox4 = new javax.swing.JCheckBox();
-        jCheckBox5 = new javax.swing.JCheckBox();
-        jCheckBox3 = new javax.swing.JCheckBox();
+        SNmatch = new javax.swing.JCheckBox();
+        net = new javax.swing.JPanel();
+        mngmnt2 = new javax.swing.JCheckBox();
+        mngmnt1 = new javax.swing.JCheckBox();
+        gigeOut = new javax.swing.JCheckBox();
+        gigeIn = new javax.swing.JCheckBox();
+        FPGALED = new javax.swing.JPanel();
+        RedPwr = new javax.swing.JCheckBox();
+        redRestore = new javax.swing.JCheckBox();
+        greenPwr = new javax.swing.JCheckBox();
+        redAlarm = new javax.swing.JCheckBox();
+        ASILED = new javax.swing.JPanel();
+        ASI1 = new javax.swing.JCheckBox();
+        ASI3 = new javax.swing.JCheckBox();
+        ASI4 = new javax.swing.JCheckBox();
+        ASI2 = new javax.swing.JCheckBox();
         jLabel3 = new javax.swing.JLabel();
 
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel2.border.title"))); // NOI18N
@@ -1190,131 +1285,186 @@ public final class initTopComponent extends TopComponent {
 
         jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel5.border.title"))); // NOI18N
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox1.text")); // NOI18N
-        jCheckBox1.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(SNmatch, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.SNmatch.text")); // NOI18N
+        SNmatch.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jCheckBox1ActionPerformed(evt);
+                SNmatchActionPerformed(evt);
             }
         });
 
-        jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel6.border.title"))); // NOI18N
+        net.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.net.border.title"))); // NOI18N
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox7, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox7.text")); // NOI18N
-
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox6, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox6.text")); // NOI18N
-        jCheckBox6.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(mngmnt2, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.mngmnt2.text")); // NOI18N
+        mngmnt2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jCheckBox6ActionPerformed(evt);
+                mngmnt2ActionPerformed(evt);
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox9, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox9.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(mngmnt1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.mngmnt1.text")); // NOI18N
+        mngmnt1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mngmnt1ActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox8, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox8.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(gigeOut, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.gigeOut.text")); // NOI18N
+        gigeOut.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                gigeOutActionPerformed(evt);
+            }
+        });
 
-        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
-        jPanel6.setLayout(jPanel6Layout);
-        jPanel6Layout.setHorizontalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel6Layout.createSequentialGroup()
+        org.openide.awt.Mnemonics.setLocalizedText(gigeIn, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.gigeIn.text")); // NOI18N
+        gigeIn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                gigeInActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout netLayout = new javax.swing.GroupLayout(net);
+        net.setLayout(netLayout);
+        netLayout.setHorizontalGroup(
+            netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(netLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jCheckBox6)
-                    .addComponent(jCheckBox7)
-                    .addComponent(jCheckBox8)
-                    .addComponent(jCheckBox9))
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(mngmnt1)
+                    .addComponent(mngmnt2)
+                    .addComponent(gigeIn)
+                    .addComponent(gigeOut))
                 .addContainerGap())
         );
-        jPanel6Layout.setVerticalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel6Layout.createSequentialGroup()
+        netLayout.setVerticalGroup(
+            netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(netLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jCheckBox6)
+                .addComponent(mngmnt1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox7)
+                .addComponent(mngmnt2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox8)
+                .addComponent(gigeIn)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox9)
+                .addComponent(gigeOut)
                 .addContainerGap())
         );
 
-        jPanel7.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel7.border.title"))); // NOI18N
+        FPGALED.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.FPGALED.border.title"))); // NOI18N
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox10, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox10.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(RedPwr, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.RedPwr.text")); // NOI18N
+        RedPwr.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                RedPwrActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox12, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox12.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(redRestore, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.redRestore.text")); // NOI18N
+        redRestore.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                redRestoreActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox13, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox13.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(greenPwr, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.greenPwr.text")); // NOI18N
+        greenPwr.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                greenPwrActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox11, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox11.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(redAlarm, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.redAlarm.text")); // NOI18N
+        redAlarm.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                redAlarmActionPerformed(evt);
+            }
+        });
 
-        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
-        jPanel7.setLayout(jPanel7Layout);
-        jPanel7Layout.setHorizontalGroup(
-            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel7Layout.createSequentialGroup()
+        javax.swing.GroupLayout FPGALEDLayout = new javax.swing.GroupLayout(FPGALED);
+        FPGALED.setLayout(FPGALEDLayout);
+        FPGALEDLayout.setHorizontalGroup(
+            FPGALEDLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(FPGALEDLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jCheckBox13)
-                    .addComponent(jCheckBox10)
-                    .addComponent(jCheckBox11)
-                    .addComponent(jCheckBox12))
+                .addGroup(FPGALEDLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(greenPwr)
+                    .addComponent(RedPwr)
+                    .addComponent(redAlarm)
+                    .addComponent(redRestore))
                 .addContainerGap(26, Short.MAX_VALUE))
         );
-        jPanel7Layout.setVerticalGroup(
-            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel7Layout.createSequentialGroup()
+        FPGALEDLayout.setVerticalGroup(
+            FPGALEDLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(FPGALEDLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jCheckBox10)
+                .addComponent(RedPwr)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox11)
+                .addComponent(redAlarm)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox12)
+                .addComponent(redRestore)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox13)
+                .addComponent(greenPwr)
                 .addContainerGap())
         );
 
-        jPanel8.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
+        ASILED.setBorder(javax.swing.BorderFactory.createBevelBorder(javax.swing.border.BevelBorder.RAISED));
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox2, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox2.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(ASI1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ASI1.text")); // NOI18N
+        ASI1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ASI1ActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox4, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox4.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(ASI3, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ASI3.text")); // NOI18N
+        ASI3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ASI3ActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox5, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox5.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(ASI4, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ASI4.text")); // NOI18N
+        ASI4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ASI4ActionPerformed(evt);
+            }
+        });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jCheckBox3, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jCheckBox3.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(ASI2, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ASI2.text")); // NOI18N
+        ASI2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ASI2ActionPerformed(evt);
+            }
+        });
 
         org.openide.awt.Mnemonics.setLocalizedText(jLabel3, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel3.text")); // NOI18N
 
-        javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
-        jPanel8.setLayout(jPanel8Layout);
-        jPanel8Layout.setHorizontalGroup(
-            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel8Layout.createSequentialGroup()
+        javax.swing.GroupLayout ASILEDLayout = new javax.swing.GroupLayout(ASILED);
+        ASILED.setLayout(ASILEDLayout);
+        ASILEDLayout.setHorizontalGroup(
+            ASILEDLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(ASILEDLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(jLabel3)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox2)
+                .addComponent(ASI1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox3)
+                .addComponent(ASI2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox4)
+                .addComponent(ASI3)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jCheckBox5)
+                .addComponent(ASI4)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
-        jPanel8Layout.setVerticalGroup(
-            jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel8Layout.createSequentialGroup()
+        ASILEDLayout.setVerticalGroup(
+            ASILEDLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(ASILEDLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(ASILEDLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
-                    .addComponent(jCheckBox2)
-                    .addComponent(jCheckBox3)
-                    .addComponent(jCheckBox4)
-                    .addComponent(jCheckBox5))
+                    .addComponent(ASI1)
+                    .addComponent(ASI2)
+                    .addComponent(ASI3)
+                    .addComponent(ASI4))
                 .addContainerGap())
         );
 
@@ -1325,26 +1475,26 @@ public final class initTopComponent extends TopComponent {
             .addGroup(jPanel5Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jCheckBox1)
+                    .addComponent(SNmatch)
                     .addGroup(jPanel5Layout.createSequentialGroup()
-                        .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(net, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jPanel8, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(FPGALED, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(ASILED, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel5Layout.createSequentialGroup()
-                .addComponent(jCheckBox1)
+                .addComponent(SNmatch)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(net, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel5Layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(FPGALED, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel8, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(ASILED, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -1356,12 +1506,11 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(jPanel1Layout.createSequentialGroup()
-                            .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -1401,7 +1550,14 @@ public final class initTopComponent extends TopComponent {
     }//GEN-LAST:event_SelectFPGAActionPerformed
 
     private void printitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_printitActionPerformed
+        appendCsv();
         print();
+        cbsn = false;
+        SNmatch.setSelected(false);
+        FPGALED.setVisible(false);
+        ASILED.setVisible(false);
+        gigeIn.setEnabled(false);
+        gigeOut.setEnabled(false);
     }//GEN-LAST:event_printitActionPerformed
 
     private void startTestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startTestActionPerformed
@@ -1446,35 +1602,77 @@ public final class initTopComponent extends TopComponent {
         }
     }//GEN-LAST:event_programFPGAActionPerformed
 
-    private void jCheckBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jCheckBox1ActionPerformed
+    private void SNmatchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SNmatchActionPerformed
+        cbsn = SNmatch.isSelected();
+    }//GEN-LAST:event_SNmatchActionPerformed
 
-    private void jCheckBox6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox6ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jCheckBox6ActionPerformed
+    private void mngmnt1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mngmnt1ActionPerformed
+        cbmn1 = mngmnt1.isSelected();
+    }//GEN-LAST:event_mngmnt1ActionPerformed
+
+    private void mngmnt2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mngmnt2ActionPerformed
+        cbmn2 = mngmnt2.isSelected();
+    }//GEN-LAST:event_mngmnt2ActionPerformed
+
+    private void gigeInActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_gigeInActionPerformed
+        cbgein = gigeIn.isSelected();
+    }//GEN-LAST:event_gigeInActionPerformed
+
+    private void gigeOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_gigeOutActionPerformed
+        cbgeout = gigeOut.isSelected();
+    }//GEN-LAST:event_gigeOutActionPerformed
+
+    private void RedPwrActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RedPwrActionPerformed
+        cbredpwr = RedPwr.isSelected();
+    }//GEN-LAST:event_RedPwrActionPerformed
+
+    private void redAlarmActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_redAlarmActionPerformed
+        cbredfault = redAlarm.isSelected();
+    }//GEN-LAST:event_redAlarmActionPerformed
+
+    private void redRestoreActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_redRestoreActionPerformed
+        cbredrestore = redRestore.isSelected();
+    }//GEN-LAST:event_redRestoreActionPerformed
+
+    private void greenPwrActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_greenPwrActionPerformed
+        cbgreen = greenPwr.isSelected();
+    }//GEN-LAST:event_greenPwrActionPerformed
+
+    private void ASI1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ASI1ActionPerformed
+        cbasi1 = ASI1.isSelected();
+    }//GEN-LAST:event_ASI1ActionPerformed
+
+    private void ASI2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ASI2ActionPerformed
+        cbasi2 = ASI2.isSelected();
+    }//GEN-LAST:event_ASI2ActionPerformed
+
+    private void ASI3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ASI3ActionPerformed
+        cbasi3 = ASI3.isSelected();
+    }//GEN-LAST:event_ASI3ActionPerformed
+
+    private void ASI4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ASI4ActionPerformed
+        cbasi4 = ASI4.isSelected();
+    }//GEN-LAST:event_ASI4ActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JCheckBox ASI1;
+    private javax.swing.JCheckBox ASI2;
+    private javax.swing.JCheckBox ASI3;
+    private javax.swing.JCheckBox ASI4;
+    private javax.swing.JPanel ASILED;
+    private javax.swing.JPanel FPGALED;
     private javax.swing.JLabel FPGAfile;
     private javax.swing.JFileChooser FPGAfileChooser;
+    private javax.swing.JCheckBox RedPwr;
+    private javax.swing.JCheckBox SNmatch;
     private javax.swing.JButton SelectFPGA;
     private javax.swing.JLabel deviceStatus;
     private javax.swing.JLabel errorStatus;
+    private javax.swing.JCheckBox gigeIn;
+    private javax.swing.JCheckBox gigeOut;
+    private javax.swing.JCheckBox greenPwr;
     private javax.swing.JButton initialize;
     private javax.swing.JLabel instructions;
-    private javax.swing.JCheckBox jCheckBox1;
-    private javax.swing.JCheckBox jCheckBox10;
-    private javax.swing.JCheckBox jCheckBox11;
-    private javax.swing.JCheckBox jCheckBox12;
-    private javax.swing.JCheckBox jCheckBox13;
-    private javax.swing.JCheckBox jCheckBox2;
-    private javax.swing.JCheckBox jCheckBox3;
-    private javax.swing.JCheckBox jCheckBox4;
-    private javax.swing.JCheckBox jCheckBox5;
-    private javax.swing.JCheckBox jCheckBox6;
-    private javax.swing.JCheckBox jCheckBox7;
-    private javax.swing.JCheckBox jCheckBox8;
-    private javax.swing.JCheckBox jCheckBox9;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
@@ -1483,16 +1681,18 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
-    private javax.swing.JPanel jPanel6;
-    private javax.swing.JPanel jPanel7;
-    private javax.swing.JPanel jPanel8;
     private javax.swing.JLabel lOper;
     private javax.swing.JLabel lgMAC;
     private javax.swing.JLabel lmMAC;
     private javax.swing.JLabel lserNum;
+    private javax.swing.JCheckBox mngmnt1;
+    private javax.swing.JCheckBox mngmnt2;
+    private javax.swing.JPanel net;
     private javax.swing.JTextField operator;
     private javax.swing.JButton printit;
     private javax.swing.JButton programFPGA;
+    private javax.swing.JCheckBox redAlarm;
+    private javax.swing.JCheckBox redRestore;
     private javax.swing.JSpinner serNum;
     private javax.swing.JButton startTest;
     private javax.swing.JLabel testerPresent;
