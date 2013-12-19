@@ -20,6 +20,7 @@ import java.io.PrintStream;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.OrientationRequested;
@@ -101,10 +102,14 @@ public final class initTopComponent extends TopComponent {
     public static String code= "code";
     public static String flash = "flash";
     public static boolean cbsn;
-    public static boolean cbmn1;
-    public static boolean cbmn2;
-    public static boolean cbgein;
-    public static boolean cbgeout;
+    public static boolean cbglm1;
+    public static boolean cbglm2;
+    public static boolean cbglgi;
+    public static boolean cbglgo;
+    public static boolean cborm1;
+    public static boolean cborm2;
+    public static boolean cborgi;
+    public static boolean cborgo;
     public static boolean cbredpwr;
     public static boolean cbredfault;
     public static boolean cbredrestore;
@@ -113,11 +118,15 @@ public final class initTopComponent extends TopComponent {
     public static boolean cbasi2;
     public static boolean cbasi3;
     public static boolean cbasi4;
-    public boolean FPGAselected = false;
+    public static boolean FPGAselected = false;
+    public static boolean tPresent = false;
+    public static boolean ok = false;
     public boolean prReady = false;
     public String errorMessage = "";
     public String oper = "";
     public long errorDispStart = 0L;
+    public Date testStart;
+    public Date testEnd;
     public boolean printDialog = true;
     public boolean printInteractive = true;
     public static JTextArea ptext;
@@ -127,6 +136,7 @@ public final class initTopComponent extends TopComponent {
     private final String useFont = "Consolas";
     private final int baseMAC = 0x0A5000;
     private final int getTimeout = 1000;
+    private int stage = 0;
     private int serialNumber;
     private int maintMac;
     private int gigeMac;
@@ -161,6 +171,8 @@ public final class initTopComponent extends TopComponent {
         System.out.println(System.getProperty("java.vm.name"));
         System.out.printf("Current System Time=0x%08x dec=%d\n", oor, oor);
   
+        OK.setVisible(false);
+        programFPGA.setEnabled(false);
         // create a blind text area for the print function to use.
         ptext = new javax.swing.JTextArea();
         ptext.setLineWrap(true);
@@ -172,7 +184,7 @@ public final class initTopComponent extends TopComponent {
         int minSerNum = 1001;
         SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(lastSerial+1, minSerNum, minSerNum + 0x0fff, 1);
         serNum.setModel(spinnerNumberModel);
-        
+        stage = 0;
         Thread t = new Thread(new ExecTest());
         t.start();  
     }
@@ -280,16 +292,67 @@ public final class initTopComponent extends TopComponent {
     }
 
     public void print() {
-        
+        String startStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testStart);
+        String endStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testEnd);
         printText = lserNum.getText() + "\n";
         printText += lmMAC.getText() + "\n";
         printText += lgMAC.getText() + "\n";
              
+        long duration = testEnd.getTime() - testStart.getTime();
+        if (duration > 0) {
+            long milli = duration % 1000;
+            duration /= 1000;
+            long secs = duration % 60;
+            duration /= 60;
+            long min =  duration % 60;
+            duration /= 60;
+            long hours = duration % 24;
+            printText += "Test Started " + startStamp + "\n";
+            printText += "Test Ended " + endStamp + "\n";
+            printText += "Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "\n";
+        }
+        
         MessageFormat header = new MessageFormat(" Whooshcom Production Test Follower");
-        MessageFormat footer = new MessageFormat(" " +  "          Page - {0}");
+        MessageFormat footer = new MessageFormat(" " + "          Page - {0}");
         ptext.setText(printText);
         PrintingTask task = new PrintingTask(header, footer);
         task.execute();
+
+        cbsn = false;
+        SNmatch.setSelected(false);
+        cborm1 = false;
+        ORM1.setSelected(false);
+        cborm2 = false;
+        ORM2.setSelected(false);
+        cbglm1 = false;
+        GLM1.setSelected(false);
+        cbglm2 = false;
+        GLM2.setSelected(false);
+        cborgi = false;
+        ORGI.setSelected(false);
+        cborgo = false;
+        ORGO.setSelected(false);
+        cbglgi = false;
+        GLGI.setSelected(false);
+        cbglgo = false;
+        GLGO.setSelected(false);
+        cbredpwr = false;
+        RedPwr.setSelected(false);
+        cbredfault = false;
+        redAlarm.setSelected(false);
+        cbredrestore = false;
+        redRestore.setSelected(false);
+        cbgreen = false;
+        greenPwr.setSelected(false);
+        cbasi1 = false;
+        ASI1.setSelected(false);
+        cbasi2 = false;
+        ASI2.setSelected(false);
+        cbasi3 = false;
+        ASI3.setSelected(false);
+        cbasi4 = false;
+        ASI4.setSelected(false);
+
     }
 
     private class PrintingTask extends SwingWorker<Object, Object> {
@@ -358,7 +421,7 @@ public final class initTopComponent extends TopComponent {
                 }
             }
         } catch (IOException ex) {
-            deviceStatus.setText("No Device at http://192.168.34.123");
+            //deviceStatus.setText("No Device at http://192.168.34.123");
             System.out.println(" No device at http://192.168.34.123");
             //Exceptions.printStackTrace(ex);
             return (false);
@@ -480,16 +543,18 @@ public final class initTopComponent extends TopComponent {
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/XML_state.htm").timeout(getTimeout).get();
             //Element link = doc.select("state").first();
-            String state = doc.body().text();
-            System.out.println("State=" + state);
-            if (state.equalsIgnoreCase("failed")) {
-                errorStatus.setText("ERROR: Device Failed Test");
-                testerPresent.setForeground(Color.red);
-                testerPresent.setText("Tester Present: FAILED");
-                return (false);
-            } else {
-                testerPresent.setForeground(Color.green);
-                testerPresent.setText("Tester Present: TESTING");
+            if (!stopTest) {
+                String state = doc.body().text();
+                System.out.println("State=" + state);
+                if (state.equalsIgnoreCase("failed")) {
+                    errorStatus.setText("ERROR: Device Failed Test");
+                    //testerPresent.setForeground(Color.red);
+                    //testerPresent.setText("Tester Present: FAILED");
+                    return (false);
+                } else {
+                    testerPresent.setForeground(Color.green);
+                    testerPresent.setText("Tester Present: TESTING");
+                }
             }
         } catch (IOException ex) {
             //Exceptions.printStackTrace(ex);
@@ -870,12 +935,12 @@ public final class initTopComponent extends TopComponent {
             cbsn = false;
             SNmatch.setSelected(false);
             SNmatch.setEnabled(false);
-            mngmnt1.setEnabled(false);
-            mngmnt2.setEnabled(false);
+            ORM1.setEnabled(false);
+            ORM2.setEnabled(false);
             FPGALED.setVisible(false);
             ASILED.setVisible(false);
-            gigeIn.setEnabled(false);
-            gigeOut.setEnabled(false);
+            ORGI.setEnabled(false);
+            ORGO.setEnabled(false);
             printit.setEnabled(false);
             boolean setupDone = false;
             while (!setupDone) {
@@ -885,44 +950,45 @@ public final class initTopComponent extends TopComponent {
                 } else {
                     lOper.setText("Operator=" + oper);
                     lOper.setForeground(Color.green);
-                    if (!FPGAselected) {
-                        instructions.setText("Instructions: Please select FPGA file");
-                    } else {
-                        if (connectTester()) {
-                            setupDone = true;
-                        } else {
-                            instructions.setText("Instructions: Please connect Tester");
-                        }
-                    }
+                    setupDone = true;
                 }
                 delay(1);
             }
-            
+            tPresent = connectTester();
             operator.setEnabled(false);
-            SelectFPGA.setEnabled(false);
 
             while (true) {
                 SNmatch.setEnabled(true);
                 instructions.setText("Instructions: Searching for Device");
                 while (connect123()) {
+                    stage = 1;
+                    while (!FPGAselected) {
+                        instructions.setText("Instructions: Please select FPGA file");
+                        delay(1);
+                    }
                     errorStatus.setText("Error:");
                     errorStatus.setForeground(Color.green);
                     initialize.setEnabled(true);
                     startTest.setEnabled(false);
-                    mngmnt1.setEnabled(true);
-                    mngmnt2.setEnabled(true);
+                    ORM1.setEnabled(true);
+                    ORM2.setEnabled(true);
                     printit.setEnabled(true);
                     instructions.setText("Instructions: Check serial numbers, Manamgement port LEDs and click Initialize");
-                    cbmn1 = false;
-                    mngmnt1.setSelected(false);
-                    cbmn2 = false;
-                    mngmnt2.setSelected(false);
+                    cbglm1 = false;
+                    ORM1.setSelected(false);
+                    cbglm2 = false;
+                    ORM2.setSelected(false);
                     if (startProgram) {
+                        stage = 2;
                         startProgram = false;
-                        cbgein = false;
-                        gigeIn.setSelected(false);
-                        cbgeout = false;
-                        gigeOut.setSelected(false);
+                        cborgi = false;
+                        ORGI.setSelected(false);
+                        cborgo = false;
+                        ORGO.setSelected(false);
+                        cbglgi = false;
+                        GLGI.setSelected(false);
+                        cbglgo = false;
+                        GLGO.setSelected(false);
                         cbredpwr = false;
                         RedPwr.setSelected(false);
                         cbredfault = false;
@@ -941,14 +1007,20 @@ public final class initTopComponent extends TopComponent {
                         ASI4.setSelected(false);
 
                         if (saveGige()) {
+                            stage = 3;
                             FPGALED.setVisible(true);
                             instructions.setText("Instructions: Check LED sequence");
                             if (deleteFPGA()) {
+                                stage = 4;
                                 if (programFPGA()) {
+                                    stage = 5;
                                     if (saveMaint()) {
+                                        stage = 6;
                                         if (!saveSerial()) {
                                             errorStatus.setText("Error: Failed to program Serial Number");
                                             errorStatus.setForeground(Color.red);
+                                        } else {
+                                            stage = 7;
                                         }
                                         resetDevice(123);
                                     } else {
@@ -972,39 +1044,54 @@ public final class initTopComponent extends TopComponent {
                 }
                 initialize.setEnabled(false);
                 while (connect124()) {
+                    stage = 8;
                     resetDevice(124);
                     delay(1);
                 }
                 while (connect50()) {
                     // TODO need to get code revisions off this screen, somehow....
-                    errorStatus.setText("Error:");
+                    while (!tPresent) {
+                        tPresent = connectTester();
+                        instructions.setText("Instructions: Please connect Tester");
+                        delay(1);
+                    } 
+                    errorStatus.setText("Status:");
+                    printit.setEnabled(true);
                     errorStatus.setForeground(Color.green);
                     instructions.setText("Instructions: Connect tester and start test");
                     startTest.setEnabled(true);
                     if (runTest) {
+                        errorStatus.setText("Status: TESTING");
                         ASILED.setVisible(true);
-                        gigeIn.setEnabled(true);
-                        gigeOut.setEnabled(true);
+                        ORGI.setEnabled(true);
+                        ORGO.setEnabled(true);
                         runTest = false;
-                        startTest.setText("Stop Test");
+                        stopTest = false;
                         testerOff();
                         setTesterMAC();
                         startTester();
+                        testStart = Calendar.getInstance().getTime();
                         instructions.setText("Instructions: Verify ASI and GigE LEDs");
                         boolean failed = false;
-                        while (!failed || !stopTest) {
-                            failed = checkFail();
+                        while (!failed && !stopTest) {
+                            failed = !checkFail();
                             delay(1);
                         }
                         stopTest = false;
-                        startTest.setText("Start Test");
                         testerOff();
+                        testEnd = Calendar.getInstance().getTime();
                         if (failed) {
                             instructions.setText("Instructions: Test Failed");
                             errorStatus.setText("Error: Test Failed");
                             errorStatus.setForeground(Color.red);
+                                ok = false;
+                                OK.setVisible(true);
+                                while (!ok) {
+                                    delay(1);
+                                }
                         } else {
-                            if (cbsn && cbmn1 && cbmn2 && cbgein && cbgeout
+                            if (cbsn && cbglm1 && cbglm2 && cbglgi && cbglgo
+                                    && cborm1 && cborm2 && cborgi && cborgo
                                     && cbredpwr && cbredfault && cbredrestore && cbgreen
                                     && cbasi1 && cbasi2 && cbasi3 && cbasi4) {
                                 appendCsv();
@@ -1013,11 +1100,17 @@ public final class initTopComponent extends TopComponent {
                                 SNmatch.setSelected(false);
                                 FPGALED.setVisible(false);
                                 ASILED.setVisible(false);
-                                gigeIn.setEnabled(false);
-                                gigeOut.setEnabled(false);
-
+                                ORGI.setEnabled(false);
+                                ORGO.setEnabled(false);
+                                GLGI.setEnabled(false);
+                                GLGO.setEnabled(false);
                             } else {
                                 instructions.setText("Instructions: Check all LEDs and Print results");
+                                ok = false;
+                                OK.setVisible(true);
+                                while (!ok) {
+                                    delay(1);
+                                }
                             }
                         }
                     } else {
@@ -1028,6 +1121,7 @@ public final class initTopComponent extends TopComponent {
                 }
                 startTest.setEnabled(false);
                 delay(1);
+                stage = 0;
             }
         }
     }
@@ -1045,6 +1139,7 @@ public final class initTopComponent extends TopComponent {
         jPanel2 = new javax.swing.JPanel();
         instructions = new javax.swing.JLabel();
         errorStatus = new javax.swing.JLabel();
+        OK = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         lserNum = new javax.swing.JLabel();
         deviceStatus = new javax.swing.JLabel();
@@ -1066,10 +1161,18 @@ public final class initTopComponent extends TopComponent {
         jPanel5 = new javax.swing.JPanel();
         SNmatch = new javax.swing.JCheckBox();
         net = new javax.swing.JPanel();
-        mngmnt2 = new javax.swing.JCheckBox();
-        mngmnt1 = new javax.swing.JCheckBox();
-        gigeOut = new javax.swing.JCheckBox();
-        gigeIn = new javax.swing.JCheckBox();
+        ORM2 = new javax.swing.JCheckBox();
+        ORM1 = new javax.swing.JCheckBox();
+        ORGO = new javax.swing.JCheckBox();
+        ORGI = new javax.swing.JCheckBox();
+        GLM1 = new javax.swing.JCheckBox();
+        GLM2 = new javax.swing.JCheckBox();
+        GLGI = new javax.swing.JCheckBox();
+        GLGO = new javax.swing.JCheckBox();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel7 = new javax.swing.JLabel();
         FPGALED = new javax.swing.JPanel();
         RedPwr = new javax.swing.JCheckBox();
         redRestore = new javax.swing.JCheckBox();
@@ -1082,6 +1185,7 @@ public final class initTopComponent extends TopComponent {
         ASI2 = new javax.swing.JCheckBox();
         jLabel3 = new javax.swing.JLabel();
 
+        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel2.border.title"))); // NOI18N
 
         instructions.setFont(new java.awt.Font("Lucida Grande", 0, 18)); // NOI18N
@@ -1090,6 +1194,13 @@ public final class initTopComponent extends TopComponent {
         errorStatus.setFont(new java.awt.Font("Lucida Grande", 0, 18)); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(errorStatus, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.errorStatus.text")); // NOI18N
 
+        org.openide.awt.Mnemonics.setLocalizedText(OK, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.OK.text")); // NOI18N
+        OK.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                OKActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
@@ -1097,15 +1208,22 @@ public final class initTopComponent extends TopComponent {
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(instructions)
-                    .addComponent(errorStatus))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(instructions)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(OK))
+                    .addGroup(jPanel2Layout.createSequentialGroup()
+                        .addComponent(errorStatus)
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(instructions)
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(instructions)
+                    .addComponent(OK))
                 .addGap(18, 18, 18)
                 .addComponent(errorStatus)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -1233,7 +1351,7 @@ public final class initTopComponent extends TopComponent {
                                 .addComponent(operator, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(lOper, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 177, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 258, Short.MAX_VALUE)
                                 .addComponent(printit))
                             .addGroup(jPanel4Layout.createSequentialGroup()
                                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1255,7 +1373,7 @@ public final class initTopComponent extends TopComponent {
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(FPGAfile)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(500, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1280,7 +1398,7 @@ public final class initTopComponent extends TopComponent {
                     .addComponent(SelectFPGA))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(FPGAfile)
-                .addContainerGap(64, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel5.border.title"))); // NOI18N
@@ -1294,58 +1412,126 @@ public final class initTopComponent extends TopComponent {
 
         net.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.net.border.title"))); // NOI18N
 
-        org.openide.awt.Mnemonics.setLocalizedText(mngmnt2, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.mngmnt2.text")); // NOI18N
-        mngmnt2.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(ORM2, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ORM2.text")); // NOI18N
+        ORM2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                mngmnt2ActionPerformed(evt);
+                ORM2ActionPerformed(evt);
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(mngmnt1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.mngmnt1.text")); // NOI18N
-        mngmnt1.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(ORM1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ORM1.text")); // NOI18N
+        ORM1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                mngmnt1ActionPerformed(evt);
+                ORM1ActionPerformed(evt);
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(gigeOut, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.gigeOut.text")); // NOI18N
-        gigeOut.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(ORGO, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ORGO.text")); // NOI18N
+        ORGO.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                gigeOutActionPerformed(evt);
+                ORGOActionPerformed(evt);
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(gigeIn, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.gigeIn.text")); // NOI18N
-        gigeIn.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(ORGI, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ORGI.text")); // NOI18N
+        ORGI.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                gigeInActionPerformed(evt);
+                ORGIActionPerformed(evt);
             }
         });
+
+        org.openide.awt.Mnemonics.setLocalizedText(GLM1, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.GLM1.text")); // NOI18N
+        GLM1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                GLM1ActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(GLM2, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.GLM2.text")); // NOI18N
+        GLM2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                GLM2ActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(GLGI, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.GLGI.text")); // NOI18N
+        GLGI.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                GLGIActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(GLGO, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.GLGO.text")); // NOI18N
+        GLGO.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                GLGOActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel4, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel4.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel5, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel5.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel6, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel6.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel7, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel7.text")); // NOI18N
 
         javax.swing.GroupLayout netLayout = new javax.swing.GroupLayout(net);
         net.setLayout(netLayout);
         netLayout.setHorizontalGroup(
             netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(netLayout.createSequentialGroup()
-                .addContainerGap()
                 .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(mngmnt1)
-                    .addComponent(mngmnt2)
-                    .addComponent(gigeIn)
-                    .addComponent(gigeOut))
+                    .addGroup(netLayout.createSequentialGroup()
+                        .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(GLM1)
+                            .addComponent(GLM2)
+                            .addComponent(GLGI)
+                            .addComponent(GLGO)
+                            .addGroup(netLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(jLabel4)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel5)
+                            .addComponent(ORM1)
+                            .addComponent(ORM2)
+                            .addComponent(ORGI)
+                            .addComponent(ORGO)))
+                    .addGroup(netLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel6)
+                        .addGap(18, 18, 18)
+                        .addComponent(jLabel7)))
                 .addContainerGap())
         );
         netLayout.setVerticalGroup(
             netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(netLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(mngmnt1)
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel4)
+                    .addComponent(jLabel5))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(mngmnt2)
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel6)
+                    .addComponent(jLabel7))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(gigeIn)
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ORM1)
+                    .addComponent(GLM1))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(gigeOut)
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ORM2)
+                    .addComponent(GLM2))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ORGI)
+                    .addComponent(GLGI))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(netLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(ORGO)
+                    .addComponent(GLGO))
                 .addContainerGap())
         );
 
@@ -1521,9 +1707,9 @@ public final class initTopComponent extends TopComponent {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -1546,6 +1732,8 @@ public final class initTopComponent extends TopComponent {
             FPGAfileptr = FPGAfileChooser.getSelectedFile();
             FPGAfile.setText(FPGAfilename);
             FPGAselected = true;
+            programFPGA.setEnabled(true);
+            SelectFPGA.setEnabled(false);
         }
     }//GEN-LAST:event_SelectFPGAActionPerformed
 
@@ -1556,8 +1744,8 @@ public final class initTopComponent extends TopComponent {
         SNmatch.setSelected(false);
         FPGALED.setVisible(false);
         ASILED.setVisible(false);
-        gigeIn.setEnabled(false);
-        gigeOut.setEnabled(false);
+        ORGI.setEnabled(false);
+        ORGO.setEnabled(false);
     }//GEN-LAST:event_printitActionPerformed
 
     private void startTestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startTestActionPerformed
@@ -1606,21 +1794,21 @@ public final class initTopComponent extends TopComponent {
         cbsn = SNmatch.isSelected();
     }//GEN-LAST:event_SNmatchActionPerformed
 
-    private void mngmnt1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mngmnt1ActionPerformed
-        cbmn1 = mngmnt1.isSelected();
-    }//GEN-LAST:event_mngmnt1ActionPerformed
+    private void ORM1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ORM1ActionPerformed
+        cborm1 = ORM1.isSelected();
+    }//GEN-LAST:event_ORM1ActionPerformed
 
-    private void mngmnt2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mngmnt2ActionPerformed
-        cbmn2 = mngmnt2.isSelected();
-    }//GEN-LAST:event_mngmnt2ActionPerformed
+    private void ORM2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ORM2ActionPerformed
+        cborm2 = ORM2.isSelected();
+    }//GEN-LAST:event_ORM2ActionPerformed
 
-    private void gigeInActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_gigeInActionPerformed
-        cbgein = gigeIn.isSelected();
-    }//GEN-LAST:event_gigeInActionPerformed
+    private void ORGIActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ORGIActionPerformed
+        cborgi = ORGI.isSelected();
+    }//GEN-LAST:event_ORGIActionPerformed
 
-    private void gigeOutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_gigeOutActionPerformed
-        cbgeout = gigeOut.isSelected();
-    }//GEN-LAST:event_gigeOutActionPerformed
+    private void ORGOActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ORGOActionPerformed
+        cborgo = ORGO.isSelected();
+    }//GEN-LAST:event_ORGOActionPerformed
 
     private void RedPwrActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RedPwrActionPerformed
         cbredpwr = RedPwr.isSelected();
@@ -1654,6 +1842,27 @@ public final class initTopComponent extends TopComponent {
         cbasi4 = ASI4.isSelected();
     }//GEN-LAST:event_ASI4ActionPerformed
 
+    private void GLM1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_GLM1ActionPerformed
+        cbglm1 = GLM1.isSelected();
+    }//GEN-LAST:event_GLM1ActionPerformed
+
+    private void GLM2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_GLM2ActionPerformed
+        cbglm2 = GLM2.isSelected();
+    }//GEN-LAST:event_GLM2ActionPerformed
+
+    private void GLGIActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_GLGIActionPerformed
+        cbglgi = GLGI.isSelected();
+    }//GEN-LAST:event_GLGIActionPerformed
+
+    private void GLGOActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_GLGOActionPerformed
+        cbglgo = GLGO.isSelected();
+    }//GEN-LAST:event_GLGOActionPerformed
+
+    private void OKActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OKActionPerformed
+        ok = true;
+        OK.setVisible(false);
+    }//GEN-LAST:event_OKActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox ASI1;
     private javax.swing.JCheckBox ASI2;
@@ -1663,19 +1872,30 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JPanel FPGALED;
     private javax.swing.JLabel FPGAfile;
     private javax.swing.JFileChooser FPGAfileChooser;
+    private javax.swing.JCheckBox GLGI;
+    private javax.swing.JCheckBox GLGO;
+    private javax.swing.JCheckBox GLM1;
+    private javax.swing.JCheckBox GLM2;
+    private javax.swing.JButton OK;
+    private javax.swing.JCheckBox ORGI;
+    private javax.swing.JCheckBox ORGO;
+    private javax.swing.JCheckBox ORM1;
+    private javax.swing.JCheckBox ORM2;
     private javax.swing.JCheckBox RedPwr;
     private javax.swing.JCheckBox SNmatch;
     private javax.swing.JButton SelectFPGA;
     private javax.swing.JLabel deviceStatus;
     private javax.swing.JLabel errorStatus;
-    private javax.swing.JCheckBox gigeIn;
-    private javax.swing.JCheckBox gigeOut;
     private javax.swing.JCheckBox greenPwr;
     private javax.swing.JButton initialize;
     private javax.swing.JLabel instructions;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
@@ -1685,8 +1905,6 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JLabel lgMAC;
     private javax.swing.JLabel lmMAC;
     private javax.swing.JLabel lserNum;
-    private javax.swing.JCheckBox mngmnt1;
-    private javax.swing.JCheckBox mngmnt2;
     private javax.swing.JPanel net;
     private javax.swing.JTextField operator;
     private javax.swing.JButton printit;
