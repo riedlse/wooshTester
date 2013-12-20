@@ -313,12 +313,12 @@ public final class initTopComponent extends TopComponent {
         }
         
         if (cbsn) {
-            printText += "OK  - Serial Number match\n";
+            printText += "\nOK  - Serial Number match\n";
         } else {
-            printText += "ERR - Serial Number match\n";           
+            printText += "\nERR - Serial Number match\n";           
         }
         
-        printText += "\n\nLEDs Illuminate";
+        printText += "\n\nLEDs Illuminate\n";
         
         if (cborm1) {
             printText += "OK  - Management Port 1 Orange/Right LED\n";
@@ -414,8 +414,8 @@ public final class initTopComponent extends TopComponent {
             printText += "ERR - PWR/FAULT GREEN\n";           
         }
         
-        MessageFormat header = new MessageFormat(" Whooshcom Production Test Follower");
-        MessageFormat footer = new MessageFormat(" " + "          Page - {0}");
+        MessageFormat header = new MessageFormat(" Wooshcom Production Test Follower");
+        MessageFormat footer = new MessageFormat("Page - {0}");
         ptext.setText(printText);
         PrintingTask task = new PrintingTask(header, footer);
         task.execute();
