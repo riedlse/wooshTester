@@ -1,0 +1,8 @@
+WooshCom CSX-1641 Test v1.0.0 (c)2013 Bruce Marler
+1.7.0_45 64 bit
+Java HotSpot(TM) 64-Bit Server VM
+Current System Time=0x142e72b08bd dec=1386857826493
+CSX1641 [Serial= 1001 , date= , operator= , boot= , code= , flash= , Security= , something= , comments=Asked Mark to program these in.]
+CSX1641 [Serial= 1002 , date= , operator= , boot= , code= , flash= , Security=TESTER , something=TESTER , comments=TESTER]
+CSX1641 [Serial= 1003 , date=2/21/13 , operator=BM , boot=1.0.037 , code=1.0.6 , flash=3.4 , Security=No , something= , comments=Original Prototype used for all early testing: Now its Ethernet ports shut down after a period of time]
+CSX1641 [Serial= 1004 , date= , operator= , boot= , code= , flash= , Security= , something= , comments=Burned out FPGA when testing power]

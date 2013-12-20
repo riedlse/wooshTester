@@ -1,0 +1,4 @@
+WooshCom CSX-1641 Test v1.0.0 (c)2013 Bruce Marler
+1.7.0_45 64 bit
+Java HotSpot(TM) 64-Bit Server VM
+Current System Time=0x142e73d709a dec=1386859032730
