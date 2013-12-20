@@ -312,6 +312,108 @@ public final class initTopComponent extends TopComponent {
             printText += "Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "\n";
         }
         
+        if (cbsn) {
+            printText += "OK  - Serial Number match\n";
+        } else {
+            printText += "ERR - Serial Number match\n";           
+        }
+        
+        printText += "\n\nLEDs Illuminate";
+        
+        if (cborm1) {
+            printText += "OK  - Management Port 1 Orange/Right LED\n";
+        } else {
+            printText += "ERR - Management Port 1 Orange/Right LED\n";           
+        }
+        
+        if (cbglm1) {
+            printText += "OK  - Management Port 1 Green/Left LED\n";
+        } else {
+            printText += "ERR - Management Port 1 Green/Left LED\n";           
+        }
+
+        if (cborm2) {
+            printText += "OK  - Management Port 2 Orange/Right LED\n";
+        } else {
+            printText += "ERR - Management Port 2 Orange/Right LED\n";           
+        }
+        
+        if (cbglm2) {
+            printText += "OK  - Management Port 2 Green/Left LED\n";
+        } else {
+            printText += "ERR - Management Port 2 Green/Left LED\n";           
+        }
+        
+        if (cborgi) {
+            printText += "OK  - GigE Input Orange/Right LED\n";
+        } else {
+            printText += "ERR - GigE Input Orange/Right LED\n";           
+        }
+        
+        if (cbglgi) {
+            printText += "OK  - GigE Input Green/Left LED\n";
+        } else {
+            printText += "ERR - GigE Input Green/Left LED\n";           
+        }
+        
+        if (cborgo) {
+            printText += "OK  - GigE Output Orange/Right LED\n";
+        } else {
+            printText += "ERR - GigE Output Orange/Right LED\n";           
+        }
+        
+        if (cbglgo) {
+            printText += "OK  - GigE Output Green/Left LED\n";
+        } else {
+            printText += "ERR - GigE Output Green/Left LED\n";           
+        }
+        
+        printText += "ASI Sync LEDs Green 1-";
+        if (cbasi1) {
+            printText += "OK  2-";
+        } else {
+            printText += "ERR 2-";
+        }
+        if (cbasi2) {
+            printText += "OK  3-";
+        } else {
+            printText += "ERR 3-";
+        }
+        if (cbasi3) {
+            printText += "OK  4-";
+        } else {
+            printText += "ERR 4-";
+        }
+        if (cbasi4) {
+            printText += "OK\n";
+        } else {
+            printText += "ERR\n";
+        }
+        
+        if (cbredpwr) {
+            printText += "OK  - PWR/FAULT RED\n";
+        } else {
+            printText += "ERR - PWR/FAULT RED\n";           
+        }
+        
+        if (cbredfault) {
+            printText += "OK  - ALARM RED\n";
+        } else {
+            printText += "ERR - ALARM RED\n";           
+        }
+
+        if (cbredrestore) {
+            printText += "OK  - RESTORE RED\n";
+        } else {
+            printText += "ERR - RESTORE RED\n";           
+        }
+
+        if (cbgreen) {
+            printText += "OK  - PWR/FAULT GREEN\n";
+        } else {
+            printText += "ERR - PWR/FAULT GREEN\n";           
+        }
+        
         MessageFormat header = new MessageFormat(" Whooshcom Production Test Follower");
         MessageFormat footer = new MessageFormat(" " + "          Page - {0}");
         ptext.setText(printText);
@@ -476,6 +578,53 @@ public final class initTopComponent extends TopComponent {
         return (true);
     }
 
+    private boolean deleteFPGA50() {
+        System.out.println("Deleting FPGA code");
+        // delete FPGA code
+        try {
+            Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.50/webpage.html")
+                    .data("d", " DeleteFPGA code")
+                    .timeout(getTimeout)
+                    .get();
+        } catch (IOException ex) {
+            errorStatus.setText("Error deleting FPGA code");
+            //Exceptions.printStackTrace(ex);
+            return (false);
+        }
+
+        // Will have to loop here until it's done
+        boolean erasing = true;
+        while (erasing) {
+            // delete FPGA code
+            try {
+                Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.50")
+                        .timeout(getTimeout)
+                        .get();
+                System.out.println("Erasing");
+                Elements eraseElements = doc.getElementsByTag("input");
+                for (Element eraseElement : eraseElements) {
+                    String key = eraseElement.attr("name");
+                    String value = eraseElement.attr("value");
+                    //System.out.println("name=" + key + " value=" + value);
+                    if (value.equals("Update-FPGA")) {
+                        erasing = false;
+                    }
+                }
+            } catch (IOException ex) {
+                System.out.println("Error erasing FPGA");
+                //Exceptions.printStackTrace(ex);
+                return (false);
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex6) {
+                //Exceptions.printStackTrace(ex);
+            }
+
+        }
+        return (true);
+    }
+
     private boolean saveGige() {
         boolean rc = true;
         // Save gigE MAC
@@ -519,7 +668,7 @@ public final class initTopComponent extends TopComponent {
         System.out.println("Trying to connect to tester at http://192.168.34.121/Tester.htm");
         try {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm").timeout(getTimeout).get();
-            deviceStatus.setText("Tester found at 192.168.34.121");
+            //deviceStatus.setText("Tester found at 192.168.34.121");
             Elements inputElements = doc.getElementsByTag("input");
             for (Element inputElement : inputElements) {
                 String key = inputElement.attr("name");
@@ -532,7 +681,7 @@ public final class initTopComponent extends TopComponent {
             }
         } catch (IOException ex) {
             //Exceptions.printStackTrace(ex);
-            errorStatus.setText("ERROR: No Tester Present");
+            testerPresent.setText("ERROR: No Tester Present");
             return (false);
         }
         return (true);
@@ -571,6 +720,50 @@ public final class initTopComponent extends TopComponent {
         CloseableHttpClient httpclient = HttpClients.createDefault();
         try {
             HttpPost httppost = new HttpPost("http://ADMIN:admin@192.168.34.123/eS.bin");
+
+            FileBody bin = new FileBody(FPGAfileptr, ContentType.APPLICATION_OCTET_STREAM, FPGAfileptr.getName());
+            //StringBody comment = new StringBody("A binary file of some kind", ContentType.TEXT_PLAIN);
+
+            HttpEntity reqEntity = MultipartEntityBuilder.create()
+                    .addPart("datafile", bin)
+                    .build();
+
+            httppost.setEntity(reqEntity);
+
+            System.out.println("executing request " + httppost.getRequestLine());
+            CloseableHttpResponse response = httpclient.execute(httppost);
+            try {
+                System.out.println("----------------------------------------");
+                System.out.println(response.getStatusLine());
+                HttpEntity resEntity = response.getEntity();
+                if (resEntity != null) {
+                    System.out.println("Response content length: " + resEntity.getContentLength());
+                }
+                EntityUtils.consume(resEntity);
+            } finally {
+                response.close();
+            }
+        } catch (IOException ex) {
+            //Exceptions.printStackTrace(ex);
+            rc = false;
+        } finally {
+            try {
+                httpclient.close();
+            } catch (IOException ex) {
+                //Exceptions.printStackTrace(ex);
+                rc = false;
+            }
+        }
+        return(rc);
+    }
+
+    private boolean programFPGA50() {
+        boolean rc = true;
+        System.out.println("Programming FPGA with " + FPGAfileptr.getName());
+        //program FPGA
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+        try {
+            HttpPost httppost = new HttpPost("http://ADMIN:admin@192.168.34.50/eS.bin");
 
             FileBody bin = new FileBody(FPGAfileptr, ContentType.APPLICATION_OCTET_STREAM, FPGAfileptr.getName());
             //StringBody comment = new StringBody("A binary file of some kind", ContentType.TEXT_PLAIN);
@@ -746,7 +939,7 @@ public final class initTopComponent extends TopComponent {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                     .timeout(getTimeout)
                     .get();
-            deviceStatus.setText("Tester found at 192.168.34.121");
+            //deviceStatus.setText("Tester found at 192.168.34.121");
             Elements input3Elements = doc.getElementsByTag("input");
             for (Element input3Element : input3Elements) {
                 String key = input3Element.attr("name");
@@ -883,7 +1076,7 @@ public final class initTopComponent extends TopComponent {
 
             }
         } catch (IOException ex3) {
-            errorStatus.setText("Error reading back box status ip 192.168.34.50");
+            //errorStatus.setText("Error reading back box status ip 192.168.34.50");
             //Exceptions.printStackTrace(ex);
             return(false);
         }
@@ -896,7 +1089,7 @@ public final class initTopComponent extends TopComponent {
             Document doc = Jsoup.connect("http://ADMIN:admin@192.168.34.121/Tester.htm")
                     .timeout(getTimeout)
                     .get();
-            deviceStatus.setText("Tester found at 192.168.34.121");
+            //deviceStatus.setText("Tester found at 192.168.34.121");
             Elements input3Elements = doc.getElementsByTag("input");
             for (Element input3Element : input3Elements) {
                 String key = input3Element.attr("name");
@@ -932,30 +1125,45 @@ public final class initTopComponent extends TopComponent {
         @Override
         public void run() {
             setupScreen();
+            runTest = false;
             cbsn = false;
             SNmatch.setSelected(false);
             SNmatch.setEnabled(false);
             ORM1.setEnabled(false);
             ORM2.setEnabled(false);
+            GLM1.setEnabled(false);
+            GLM2.setEnabled(false);
             FPGALED.setVisible(false);
             ASILED.setVisible(false);
             ORGI.setEnabled(false);
             ORGO.setEnabled(false);
+            GLGI.setEnabled(false);
+            GLGO.setEnabled(false);
             printit.setEnabled(false);
             boolean setupDone = false;
+            int loops = 0;
+            instructions.setText("Instructions: Please enter Operator initials");
             while (!setupDone) {
                 oper = operator.getText();
-                if (oper.equals("abc")) {
-                    instructions.setText("Instructions: Please enter Operator initials");
-                } else {
-                    lOper.setText("Operator=" + oper);
-                    lOper.setForeground(Color.green);
-                    setupDone = true;
+                if (oper != null) {
+                    if (oper.equals("abc")) {
+                        //instructions.setText("Instructions: Please enter Operator initials");
+                    } else {
+                        lOper.setText("Operator=" + oper);
+                        lOper.setForeground(Color.green);
+                        loops++;
+                    }
                 }
                 delay(1);
+                if (loops > 4) {
+                    setupDone = true;
+                }
             }
-            tPresent = connectTester();
             operator.setEnabled(false);
+            tPresent = connectTester();
+            if (tPresent) {
+                testerOff();
+            }
 
             while (true) {
                 SNmatch.setEnabled(true);
@@ -972,12 +1180,19 @@ public final class initTopComponent extends TopComponent {
                     startTest.setEnabled(false);
                     ORM1.setEnabled(true);
                     ORM2.setEnabled(true);
+                    GLM1.setEnabled(true);
+                    GLM2.setEnabled(true);
                     printit.setEnabled(true);
-                    instructions.setText("Instructions: Check serial numbers, Manamgement port LEDs and click Initialize");
-                    cbglm1 = false;
-                    ORM1.setSelected(false);
+/*                    cbglm1 = false;
+                    GLM1.setSelected(false);
                     cbglm2 = false;
+                    GLM2.setSelected(false);
+                    cborm1 = false;
+                    ORM1.setSelected(false);
+                    cborm2 = false;
                     ORM2.setSelected(false);
+                    */
+                    instructions.setText("Instructions: Check serial numbers, Manamgement port LEDs and click Initialize");
                     if (startProgram) {
                         stage = 2;
                         startProgram = false;
@@ -1012,6 +1227,11 @@ public final class initTopComponent extends TopComponent {
                             instructions.setText("Instructions: Check LED sequence");
                             if (deleteFPGA()) {
                                 stage = 4;
+                                ok = false;
+                                OK.setVisible(true);
+                                while (!ok) {
+                                    delay(1);
+                                }
                                 if (programFPGA()) {
                                     stage = 5;
                                     if (saveMaint()) {
@@ -1055,16 +1275,23 @@ public final class initTopComponent extends TopComponent {
                         instructions.setText("Instructions: Please connect Tester");
                         delay(1);
                     } 
+                    testerOff();
                     errorStatus.setText("Status:");
                     printit.setEnabled(true);
                     errorStatus.setForeground(Color.green);
-                    instructions.setText("Instructions: Connect tester and start test");
+                    instructions.setText("Instructions: Connect tester to unit, move management port and start test");
                     startTest.setEnabled(true);
                     if (runTest) {
                         errorStatus.setText("Status: TESTING");
                         ASILED.setVisible(true);
+                        ORM1.setEnabled(true);
+                        ORM2.setEnabled(true);
+                        GLM1.setEnabled(true);
+                        GLM2.setEnabled(true);
                         ORGI.setEnabled(true);
                         ORGO.setEnabled(true);
+                        GLGI.setEnabled(true);
+                        GLGO.setEnabled(true);
                         runTest = false;
                         stopTest = false;
                         testerOff();
@@ -1073,8 +1300,21 @@ public final class initTopComponent extends TopComponent {
                         testStart = Calendar.getInstance().getTime();
                         instructions.setText("Instructions: Verify ASI and GigE LEDs");
                         boolean failed = false;
+                        int fails = 0;
+                        delay(1);
                         while (!failed && !stopTest) {
                             failed = !checkFail();
+                            if (failed) {
+                                fails++;
+                            }
+                            if (fails == 1) {
+                                testerOff();
+                                errorStatus.setText("Status: Restart");
+                                delay(1);
+                                startTester();
+                                delay(1);
+                                failed = false;
+                            }
                             delay(1);
                         }
                         stopTest = false;
@@ -1209,11 +1449,11 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(instructions)
+                        .addComponent(instructions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(OK))
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(errorStatus)
+                        .addComponent(errorStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
         );
@@ -1351,7 +1591,7 @@ public final class initTopComponent extends TopComponent {
                                 .addComponent(operator, javax.swing.GroupLayout.PREFERRED_SIZE, 64, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(lOper, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 258, Short.MAX_VALUE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(printit))
                             .addGroup(jPanel4Layout.createSequentialGroup()
                                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1372,8 +1612,8 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap())
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(FPGAfile)
-                .addContainerGap(500, Short.MAX_VALUE))
+                .addComponent(FPGAfile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1692,11 +1932,12 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGroup(jPanel1Layout.createSequentialGroup()
+                            .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -1786,7 +2027,19 @@ public final class initTopComponent extends TopComponent {
                 errorStatus.setText("Error: Failed to erase FPGA");
             }
         } else {
-            errorStatus.setText("Error: Device must be at .123 IP to program FPGA");
+            if (connect50()) {
+                if (deleteFPGA50()) {
+                    if (programFPGA50()) {
+                        delay(10);
+                        resetDevice(50);
+                    } else {
+                        errorStatus.setText("Error: Failed to program FPGA");
+                    }
+
+                }
+
+                errorStatus.setText("Error: Device must be at .123 IP to program FPGA");
+            }
         }
     }//GEN-LAST:event_programFPGAActionPerformed
 
