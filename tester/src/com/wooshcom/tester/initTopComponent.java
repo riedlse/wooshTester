@@ -146,7 +146,7 @@ public final class initTopComponent extends TopComponent {
     private int e3;
     private int e2;
     private int e1;
-    private static int lastSerial = 0;
+    private static int lastSerial = 1002;
 
     public initTopComponent() {
                
