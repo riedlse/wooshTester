@@ -1,0 +1,4 @@
+wooshTester
+===========
+
+Wooshcom automated test
