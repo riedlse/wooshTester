@@ -53,7 +53,7 @@ import org.openide.util.NbBundle.Messages;
  * Top component which displays something.
  */
 @ConvertAsProperties(
-        dtd = "-//com.whooshcom.tester//init//EN",
+        dtd = "-//com.wooshcom.tester//init//EN",
         autostore = false
 )
 @TopComponent.Description(
@@ -62,7 +62,7 @@ import org.openide.util.NbBundle.Messages;
         persistenceType = TopComponent.PERSISTENCE_ALWAYS
 )
 @TopComponent.Registration(mode = "output", openAtStartup = true)
-@ActionID(category = "Window", id = "com.whooshcom.tester.initTopComponent")
+@ActionID(category = "Window", id = "com.wooshcom.tester.initTopComponent")
 @ActionReference(path = "Menu/Window" /*, position = 333 */)
 @TopComponent.OpenActionRegistration(
         displayName = "#CTL_initAction",
