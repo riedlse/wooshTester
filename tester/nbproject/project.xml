@@ -3,11 +3,11 @@
     <type>org.netbeans.modules.apisupport.project</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/nb-module-project/3">
-            <code-name-base>com.whooshcom.tester</code-name-base>
+            <code-name-base>com.wooshcom.tester</code-name-base>
             <suite-component/>
             <module-dependencies>
                 <dependency>
-                    <code-name-base>org.apache</code-name-base>
+                    <code-name-base>org.apache.http</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
