@@ -269,8 +269,8 @@ public final class initTopComponent extends TopComponent {
             int sn = serialNumber;
             dev[sn] = new device();
             String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
-            writer.write(sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
-            + "security" + "," + "Dsomething" + "," + "comments" + "\n");
+            writer.write("\n" + sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
+            + "security" + "," + "Dsomething" + "," + "comments");
             writer.close();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
@@ -1142,7 +1142,7 @@ public final class initTopComponent extends TopComponent {
             printit.setEnabled(false);
             boolean setupDone = false;
             int loops = 0;
-            instructions.setText("Instructions: Please enter Operator initials");
+            instructions.setText("Please enter Operator initials");
             while (!setupDone) {
                 oper = operator.getText();
                 if (oper != null) {
@@ -1167,14 +1167,14 @@ public final class initTopComponent extends TopComponent {
 
             while (true) {
                 SNmatch.setEnabled(true);
-                instructions.setText("Instructions: Searching for Device");
+                instructions.setText("Searching for Device");
                 while (connect123()) {
                     stage = 1;
                     while (!FPGAselected) {
-                        instructions.setText("Instructions: Please select FPGA file");
+                        instructions.setText("Please select FPGA file");
                         delay(1);
                     }
-                    errorStatus.setText("Error:");
+                    errorStatus.setText(" ");
                     errorStatus.setForeground(Color.green);
                     initialize.setEnabled(true);
                     startTest.setEnabled(false);
@@ -1192,7 +1192,7 @@ public final class initTopComponent extends TopComponent {
                     cborm2 = false;
                     ORM2.setSelected(false);
                     */
-                    instructions.setText("Instructions: Check serial numbers, Manamgement port LEDs and click Initialize");
+                    instructions.setText("Select checkboxes for serial number match and Manamgement port LEDs functioning Then click Initialize button");
                     if (startProgram) {
                         stage = 2;
                         startProgram = false;
@@ -1224,14 +1224,16 @@ public final class initTopComponent extends TopComponent {
                         if (saveGige()) {
                             stage = 3;
                             FPGALED.setVisible(true);
-                            instructions.setText("Instructions: Check LED sequence");
+                            instructions.setText("Observe PWR/Fault, Alarm & Restore on UUT and check appropriate boxes if correct");
                             if (deleteFPGA()) {
                                 stage = 4;
-                                ok = false;
+                                /*ok = false;
                                 OK.setVisible(true);
-                                while (!ok) {
+                                int count=0;
+                                while (!ok && (count<20)) {
                                     delay(1);
-                                }
+                                    count++;
+                                }*/
                                 if (programFPGA()) {
                                     stage = 5;
                                     if (saveMaint()) {
@@ -1261,6 +1263,11 @@ public final class initTopComponent extends TopComponent {
                         }
                     }
                     delay(1);
+                    if (tPresent) {
+                        testerOff();
+                    } else {
+                        tPresent = connectTester();
+                    }
                 }
                 initialize.setEnabled(false);
                 while (connect124()) {
@@ -1272,14 +1279,14 @@ public final class initTopComponent extends TopComponent {
                     // TODO need to get code revisions off this screen, somehow....
                     while (!tPresent) {
                         tPresent = connectTester();
-                        instructions.setText("Instructions: Please connect Tester");
+                        instructions.setText("Please connect Tester");
                         delay(1);
                     } 
                     testerOff();
                     errorStatus.setText("Status:");
                     printit.setEnabled(true);
                     errorStatus.setForeground(Color.green);
-                    instructions.setText("Instructions: Connect tester to unit, move management port and start test");
+                    instructions.setText("Connect tester to unit, move management port and start test");
                     startTest.setEnabled(true);
                     if (runTest) {
                         errorStatus.setText("Status: TESTING");
@@ -1298,7 +1305,7 @@ public final class initTopComponent extends TopComponent {
                         setTesterMAC();
                         startTester();
                         testStart = Calendar.getInstance().getTime();
-                        instructions.setText("Instructions: Verify ASI and GigE LEDs");
+                        instructions.setText("Verify ASI and GigE LEDs");
                         boolean failed = false;
                         int fails = 0;
                         delay(1);
@@ -1321,7 +1328,7 @@ public final class initTopComponent extends TopComponent {
                         testerOff();
                         testEnd = Calendar.getInstance().getTime();
                         if (failed) {
-                            instructions.setText("Instructions: Test Failed");
+                            instructions.setText("Test Failed");
                             errorStatus.setText("Error: Test Failed");
                             errorStatus.setForeground(Color.red);
                                 ok = false;
@@ -1345,7 +1352,7 @@ public final class initTopComponent extends TopComponent {
                                 GLGI.setEnabled(false);
                                 GLGO.setEnabled(false);
                             } else {
-                                instructions.setText("Instructions: Check all LEDs and Print results");
+                                instructions.setText("Check all LEDs and Print results");
                                 ok = false;
                                 OK.setVisible(true);
                                 while (!ok) {
@@ -1354,7 +1361,7 @@ public final class initTopComponent extends TopComponent {
                             }
                         }
                     } else {
-                        instructions.setText("Instructions: Hook device up to tester and press Test");
+                        instructions.setText("Hook device up to tester and press Test");
                         startTest.setText("Start Test");
                     }
                     delay(1);
@@ -1452,9 +1459,7 @@ public final class initTopComponent extends TopComponent {
                         .addComponent(instructions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(OK))
-                    .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(errorStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                    .addComponent(errorStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jPanel2Layout.setVerticalGroup(
@@ -1479,7 +1484,6 @@ public final class initTopComponent extends TopComponent {
         org.openide.awt.Mnemonics.setLocalizedText(lgMAC, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.lgMAC.text")); // NOI18N
 
         testerPresent.setFont(new java.awt.Font("Lucida Grande", 0, 14)); // NOI18N
-        testerPresent.setForeground(new java.awt.Color(255, 0, 0));
         org.openide.awt.Mnemonics.setLocalizedText(testerPresent, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.testerPresent.text")); // NOI18N
 
         org.openide.awt.Mnemonics.setLocalizedText(lmMAC, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.lmMAC.text")); // NOI18N
@@ -1523,7 +1527,6 @@ public final class initTopComponent extends TopComponent {
             }
         });
 
-        lOper.setForeground(new java.awt.Color(255, 0, 0));
         org.openide.awt.Mnemonics.setLocalizedText(lOper, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.lOper.text")); // NOI18N
 
         jLabel1.setLabelFor(serNum);
@@ -1582,6 +1585,11 @@ public final class initTopComponent extends TopComponent {
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                        .addComponent(SelectFPGA)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(programFPGA)
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jPanel4Layout.createSequentialGroup()
                         .addContainerGap()
                         .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1603,17 +1611,9 @@ public final class initTopComponent extends TopComponent {
                                         .addComponent(initialize)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(startTest)))
-                                .addGap(0, 0, Short.MAX_VALUE))))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                        .addComponent(SelectFPGA)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(programFPGA)
-                        .addGap(0, 0, Short.MAX_VALUE)))
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(FPGAfile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
                 .addContainerGap())
-            .addGroup(jPanel4Layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(FPGAfile, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1932,12 +1932,11 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addGroup(jPanel1Layout.createSequentialGroup()
-                            .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -2181,7 +2180,7 @@ public final class initTopComponent extends TopComponent {
     void writeProperties(java.util.Properties p) {
         // better to version settings since initial version as advocated at
         // http://wiki.apidesign.org/wiki/PropertyFiles
-        p.setProperty("version", "1.0");
+        p.setProperty("version", "1.1");
         // TODO store your settings
     }
 
