@@ -21,6 +21,7 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.prefs.Preferences;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.OrientationRequested;
@@ -148,6 +149,8 @@ public final class initTopComponent extends TopComponent {
     private int e1;
     private static int lastSerial = 1002;
 
+    Preferences prefs;
+
     public initTopComponent() {
                
         initComponents();
@@ -156,11 +159,20 @@ public final class initTopComponent extends TopComponent {
         putClientProperty(TopComponent.PROP_CLOSING_DISABLED, Boolean.TRUE);
         putClientProperty(TopComponent.PROP_UNDOCKING_DISABLED, Boolean.TRUE);
 
+        prefs = Preferences.userRoot().node(this.getClass().getName());
+        FPGAfilename = prefs.get("FPGAFILENAME", FPGAfilename);
+
+        FPGAfileptr = new File(FPGAfilename);
+        if (FPGAfileptr.exists()) {
+            FPGAfile.setText(FPGAfilename);
+            FPGAselected = true;
+        }
+
         long oor = System.currentTimeMillis();
-        if (false) {
+        if (true) {
             try {
-                System.setErr(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "error_" + oor + ".txt")));
-                System.setOut(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "output_" + oor + ".txt")));
+                System.setErr(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "/error_" + oor + ".txt")));
+                System.setOut(new PrintStream(new FileOutputStream(System.getProperty("user.home") + "/output_" + oor + ".txt")));
             } catch (FileNotFoundException ex) {
                 Exceptions.printStackTrace(ex);
             }
@@ -248,6 +260,7 @@ public final class initTopComponent extends TopComponent {
         } catch (FileNotFoundException ex) {
             //Exceptions.printStackTrace(ex);
             System.out.println("File does not exist, it will be created - " + csvFileToRead);
+            errorStatus.setText("File does not exist, it will be created - " + csvFileToRead);
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         } finally {
@@ -257,7 +270,6 @@ public final class initTopComponent extends TopComponent {
                 } catch (IOException ex) {
                     Exceptions.printStackTrace(ex);
                 }
-
             }
         }
     }
@@ -1224,16 +1236,17 @@ public final class initTopComponent extends TopComponent {
                         if (saveGige()) {
                             stage = 3;
                             FPGALED.setVisible(true);
-                            instructions.setText("Observe PWR/Fault, Alarm & Restore on UUT and check appropriate boxes if correct");
+                            instructions.setText("Observe PWR/Fault, Alarm & Restore on UUT and check appropriate boxes if correct, then click OK");
                             if (deleteFPGA()) {
                                 stage = 4;
-                                /*ok = false;
+                                ok = false;
                                 OK.setVisible(true);
                                 int count=0;
                                 while (!ok && (count<20)) {
                                     delay(1);
                                     count++;
-                                }*/
+                                }
+                                instructions.setText("Programming FPGA");
                                 if (programFPGA()) {
                                     stage = 5;
                                     if (saveMaint()) {
@@ -1972,8 +1985,9 @@ public final class initTopComponent extends TopComponent {
             FPGAfileptr = FPGAfileChooser.getSelectedFile();
             FPGAfile.setText(FPGAfilename);
             FPGAselected = true;
+            prefs.put("FPGAFILENAME", FPGAfilename);
             programFPGA.setEnabled(true);
-            SelectFPGA.setEnabled(false);
+            //SelectFPGA.setEnabled(false);
         }
     }//GEN-LAST:event_SelectFPGAActionPerformed
 
