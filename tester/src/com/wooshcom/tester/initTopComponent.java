@@ -159,6 +159,8 @@ public final class initTopComponent extends TopComponent {
         putClientProperty(TopComponent.PROP_CLOSING_DISABLED, Boolean.TRUE);
         putClientProperty(TopComponent.PROP_UNDOCKING_DISABLED, Boolean.TRUE);
 
+        errorStatus.setText("Good morning Mr. Marler");
+        
         prefs = Preferences.userRoot().node(this.getClass().getName());
         FPGAfilename = prefs.get("FPGAFILENAME", FPGAfilename);
 
@@ -994,7 +996,7 @@ public final class initTopComponent extends TopComponent {
         lmMAC.setText("Maintenance MAC set=" + smaintMAC + " Read=xx-xx-xx-xx-xx-xx");
         lgMAC.setText("GigE MAC set=" + sgigeMAC + " Read=xx-xx-xx-xx-xx-xx");
         lserNum.setText("Serial Number set=" + sserialNumber + " Read=xxxxx");
-        errorStatus.setText("Error:");
+        errorStatus.setText("Good morning Mr. Marler");
     }
 
     private void delay(long seconds) {
