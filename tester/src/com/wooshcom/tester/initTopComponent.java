@@ -89,7 +89,8 @@ public final class initTopComponent extends TopComponent {
     }
     
     public device[] dev = new device[8192];
-    
+    public static boolean failed = false;
+    public static String vers = "1.3";
     public static String csvFileToRead = System.getProperty("user.home") + "/CSX1641.csv";
     public static String printText = " ";
     public static String FPGAfilename = " ";
@@ -158,8 +159,6 @@ public final class initTopComponent extends TopComponent {
         setToolTipText(Bundle.HINT_initTopComponent());
         putClientProperty(TopComponent.PROP_CLOSING_DISABLED, Boolean.TRUE);
         putClientProperty(TopComponent.PROP_UNDOCKING_DISABLED, Boolean.TRUE);
-
-        errorStatus.setText("Good morning Mr. Marler");
         
         prefs = Preferences.userRoot().node(this.getClass().getName());
         FPGAfilename = prefs.get("FPGAFILENAME", FPGAfilename);
@@ -306,9 +305,12 @@ public final class initTopComponent extends TopComponent {
     }
 
     public void print() {
+        
+        printText += "Model of Unit Under Test: CSX-1641\n\n";
+        
         String startStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testStart);
         String endStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testEnd);
-        printText = lserNum.getText() + "\n";
+        printText += lserNum.getText() + "\n";
         printText += lmMAC.getText() + "\n";
         printText += lgMAC.getText() + "\n";
              
@@ -326,10 +328,14 @@ public final class initTopComponent extends TopComponent {
             printText += "Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "\n";
         }
         
+        
+        int errs = 0;
+        
         if (cbsn) {
             printText += "\nOK  - Serial Number match\n";
         } else {
-            printText += "\nERR - Serial Number match\n";           
+            printText += "\nERR - Serial Number match\n";   
+            errs++;
         }
         
         printText += "\n\nLEDs Illuminate\n";
@@ -337,48 +343,56 @@ public final class initTopComponent extends TopComponent {
         if (cborm1) {
             printText += "OK  - Management Port 1 Orange/Right LED\n";
         } else {
+            errs++;
             printText += "ERR - Management Port 1 Orange/Right LED\n";           
         }
         
         if (cbglm1) {
             printText += "OK  - Management Port 1 Green/Left LED\n";
         } else {
+            errs++;
             printText += "ERR - Management Port 1 Green/Left LED\n";           
         }
 
         if (cborm2) {
             printText += "OK  - Management Port 2 Orange/Right LED\n";
         } else {
+            errs++;
             printText += "ERR - Management Port 2 Orange/Right LED\n";           
         }
         
         if (cbglm2) {
             printText += "OK  - Management Port 2 Green/Left LED\n";
         } else {
+            errs++;
             printText += "ERR - Management Port 2 Green/Left LED\n";           
         }
         
         if (cborgi) {
             printText += "OK  - GigE Input Orange/Right LED\n";
         } else {
+            errs++;
             printText += "ERR - GigE Input Orange/Right LED\n";           
         }
         
         if (cbglgi) {
             printText += "OK  - GigE Input Green/Left LED\n";
         } else {
+            errs++;
             printText += "ERR - GigE Input Green/Left LED\n";           
         }
         
         if (cborgo) {
             printText += "OK  - GigE Output Orange/Right LED\n";
         } else {
+            errs++;
             printText += "ERR - GigE Output Orange/Right LED\n";           
         }
         
         if (cbglgo) {
             printText += "OK  - GigE Output Green/Left LED\n";
         } else {
+            errs++;
             printText += "ERR - GigE Output Green/Left LED\n";           
         }
         
@@ -386,46 +400,67 @@ public final class initTopComponent extends TopComponent {
         if (cbasi1) {
             printText += "OK  2-";
         } else {
+            errs++;
             printText += "ERR 2-";
         }
         if (cbasi2) {
             printText += "OK  3-";
         } else {
+            errs++;
             printText += "ERR 3-";
         }
         if (cbasi3) {
             printText += "OK  4-";
         } else {
+            errs++;
             printText += "ERR 4-";
         }
         if (cbasi4) {
             printText += "OK\n";
         } else {
+            errs++;
             printText += "ERR\n";
         }
         
         if (cbredpwr) {
             printText += "OK  - PWR/FAULT RED\n";
         } else {
+            errs++;
             printText += "ERR - PWR/FAULT RED\n";           
         }
         
         if (cbredfault) {
             printText += "OK  - ALARM RED\n";
         } else {
+            errs++;
             printText += "ERR - ALARM RED\n";           
         }
 
         if (cbredrestore) {
             printText += "OK  - RESTORE RED\n";
         } else {
+            errs++;
             printText += "ERR - RESTORE RED\n";           
         }
 
         if (cbgreen) {
             printText += "OK  - PWR/FAULT GREEN\n";
         } else {
-            printText += "ERR - PWR/FAULT GREEN\n";           
+            errs++;
+            printText += "ERR - PWR/FAULT GREEN\n";
+        }
+
+        if (failed) {
+            errs++;
+            printText += "ERR - FAILED DATA TEST\n";
+        } else {
+            printText += "OK  - PASSED DATA TEST\n";
+        }
+
+        if (errs == 0) {
+            printText += "Overall Test Result for UUT S/N " + sserialNumber + " PASSED";
+        } else {
+            printText += "Overall Test Result for UUT S/N " + sserialNumber + " FAILED";            
         }
         
         MessageFormat header = new MessageFormat(" Wooshcom Production Test Follower");
@@ -662,7 +697,7 @@ public final class initTopComponent extends TopComponent {
                 }
                 if (key.equals("M1")) {
                     if (sgigeMAC.equals(value)) {
-                        lgMAC.setForeground(Color.green);
+                        lgMAC.setForeground(Color.black);
                     } else {
                         lgMAC.setForeground(Color.red);
                         rc = false;
@@ -689,7 +724,7 @@ public final class initTopComponent extends TopComponent {
                 String value = inputElement.attr("value");
                 System.out.println("name=" + key + " value=" + value);
                 if (key.equals("gmac")) {
-                    testerPresent.setForeground(Color.green);
+                    testerPresent.setForeground(Color.black);
                     testerPresent.setText("Tester Present: GigE MAC=" + value);
                 }
             }
@@ -715,7 +750,7 @@ public final class initTopComponent extends TopComponent {
                     //testerPresent.setText("Tester Present: FAILED");
                     return (false);
                 } else {
-                    testerPresent.setForeground(Color.green);
+                    testerPresent.setForeground(Color.black);
                     testerPresent.setText("Tester Present: TESTING");
                 }
             }
@@ -835,7 +870,7 @@ public final class initTopComponent extends TopComponent {
                 }
                 if (key.equals("M0")) {
                     if (smaintMAC.equals(value)) {
-                        lmMAC.setForeground(Color.green);
+                        lmMAC.setForeground(Color.black);
                     } else {
                         lmMAC.setForeground(Color.red);
                         rc = false;
@@ -872,7 +907,7 @@ public final class initTopComponent extends TopComponent {
                 //System.out.println("name=" + key + " value=" + value);
                 if (key.equals("M2")) {
                     if (sserialNumber.equals(value)) {
-                        lserNum.setForeground(Color.green);
+                        lserNum.setForeground(Color.black);
                     } else {
                         lserNum.setForeground(Color.red);
                         rc = false;
@@ -961,7 +996,7 @@ public final class initTopComponent extends TopComponent {
                 System.out.println("name=" + key + " value=" + value);
                 if (key.equals("gmac")) {
                     if (gigeMAC.equals(value)) {
-                        testerPresent.setForeground(Color.green);
+                        testerPresent.setForeground(Color.black);
                     } else {
                         testerPresent.setForeground(Color.red);
                     }
@@ -996,7 +1031,7 @@ public final class initTopComponent extends TopComponent {
         lmMAC.setText("Maintenance MAC set=" + smaintMAC + " Read=xx-xx-xx-xx-xx-xx");
         lgMAC.setText("GigE MAC set=" + sgigeMAC + " Read=xx-xx-xx-xx-xx-xx");
         lserNum.setText("Serial Number set=" + sserialNumber + " Read=xxxxx");
-        errorStatus.setText("Good morning Mr. Marler");
+        errorStatus.setText("Version" + vers);
     }
 
     private void delay(long seconds) {
@@ -1164,7 +1199,7 @@ public final class initTopComponent extends TopComponent {
                         //instructions.setText("Instructions: Please enter Operator initials");
                     } else {
                         lOper.setText("Operator=" + oper);
-                        lOper.setForeground(Color.green);
+                        lOper.setForeground(Color.black);
                         loops++;
                     }
                 }
@@ -1182,6 +1217,8 @@ public final class initTopComponent extends TopComponent {
             while (true) {
                 SNmatch.setEnabled(true);
                 instructions.setText("Searching for Device");
+                errorStatus.setText(" ");
+                errorStatus.setForeground(Color.black);
                 while (connect123()) {
                     stage = 1;
                     while (!FPGAselected) {
@@ -1189,9 +1226,10 @@ public final class initTopComponent extends TopComponent {
                         delay(1);
                     }
                     errorStatus.setText(" ");
-                    errorStatus.setForeground(Color.green);
+                    errorStatus.setForeground(Color.black);
                     initialize.setEnabled(true);
                     startTest.setEnabled(false);
+                    ASILED.setVisible(false);
                     ORM1.setEnabled(true);
                     ORM2.setEnabled(true);
                     GLM1.setEnabled(true);
@@ -1278,10 +1316,11 @@ public final class initTopComponent extends TopComponent {
                         }
                     }
                     delay(1);
-                    if (tPresent) {
-                        testerOff();
-                    } else {
+                    if (!tPresent) {
                         tPresent = connectTester();
+                        if (tPresent) {
+                            testerOff();
+                        }
                     }
                 }
                 initialize.setEnabled(false);
@@ -1298,12 +1337,16 @@ public final class initTopComponent extends TopComponent {
                         delay(1);
                     } 
                     testerOff();
+                    stage = 9;
+                    startTest.setText("Start Test");
                     errorStatus.setText("Status:");
                     printit.setEnabled(true);
-                    errorStatus.setForeground(Color.green);
+                    errorStatus.setForeground(Color.black);
                     instructions.setText("Connect tester to unit, move management port and start test");
                     startTest.setEnabled(true);
                     if (runTest) {
+                        stage=10;
+                        startTest.setText("Stop Test");
                         errorStatus.setText("Status: TESTING");
                         ASILED.setVisible(true);
                         ORM1.setEnabled(true);
@@ -1321,8 +1364,9 @@ public final class initTopComponent extends TopComponent {
                         startTester();
                         testStart = Calendar.getInstance().getTime();
                         instructions.setText("Verify ASI and GigE LEDs");
-                        boolean failed = false;
+                        failed = false;
                         int fails = 0;
+                        int testSeconds = 0;
                         delay(1);
                         while (!failed && !stopTest) {
                             failed = !checkFail();
@@ -1338,8 +1382,13 @@ public final class initTopComponent extends TopComponent {
                                 failed = false;
                             }
                             delay(1);
+                            testSeconds++;
+                            if (testSeconds > 20) {
+                                stopTest = true;
+                            }
                         }
                         stopTest = false;
+                        startTest.setText("Start Test");
                         testerOff();
                         testEnd = Calendar.getInstance().getTime();
                         if (failed) {
@@ -1367,7 +1416,7 @@ public final class initTopComponent extends TopComponent {
                                 GLGI.setEnabled(false);
                                 GLGO.setEnabled(false);
                             } else {
-                                instructions.setText("Check all LEDs and Print results");
+                                instructions.setText("Check all LEDs and Print results, then click OK");
                                 ok = false;
                                 OK.setVisible(true);
                                 while (!ok) {
@@ -2002,17 +2051,16 @@ public final class initTopComponent extends TopComponent {
         ASILED.setVisible(false);
         ORGI.setEnabled(false);
         ORGO.setEnabled(false);
+        stage = 0;
     }//GEN-LAST:event_printitActionPerformed
 
     private void startTestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startTestActionPerformed
         if (startTest.getText().equals("Start Test")) {
             runTest = true;
             stopTest = false;
-            startTest.setText("Stop Test");
         } else {
             stopTest = true;
             runTest = false;
-            startTest.setText("Start Test");
         }
     }//GEN-LAST:event_startTestActionPerformed
 
@@ -2196,7 +2244,7 @@ public final class initTopComponent extends TopComponent {
     void writeProperties(java.util.Properties p) {
         // better to version settings since initial version as advocated at
         // http://wiki.apidesign.org/wiki/PropertyFiles
-        p.setProperty("version", "1.1");
+        p.setProperty("version", vers);
         // TODO store your settings
     }
 
