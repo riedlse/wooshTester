@@ -43,7 +43,7 @@
                       <Group type="102" alignment="1" attributes="0">
                           <Component id="jPanel4" min="-2" max="-2" attributes="0"/>
                           <EmptySpace max="-2" attributes="0"/>
-                          <Component id="jPanel5" min="-2" max="-2" attributes="0"/>
+                          <Component id="jPanel5" max="32767" attributes="0"/>
                       </Group>
                   </Group>
                   <EmptySpace max="32767" attributes="0"/>
@@ -434,6 +434,9 @@
                   <ResourceString PropertyName="titleX" bundle="com/wooshcom/tester/Bundle.properties" key="initTopComponent.jPanel5.border.title" replaceFormat="org.openide.util.NbBundle.getMessage({sourceFileName}.class, &quot;{key}&quot;)"/>
                 </TitledBorder>
               </Border>
+            </Property>
+            <Property name="minimumSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
+              <Dimension value="[434, 294]"/>
             </Property>
           </Properties>
 

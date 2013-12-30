@@ -1706,6 +1706,7 @@ public final class initTopComponent extends TopComponent {
         );
 
         jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel5.border.title"))); // NOI18N
+        jPanel5.setMinimumSize(new java.awt.Dimension(434, 294));
 
         org.openide.awt.Mnemonics.setLocalizedText(SNmatch, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.SNmatch.text")); // NOI18N
         SNmatch.addActionListener(new java.awt.event.ActionListener() {
@@ -2000,7 +2001,7 @@ public final class initTopComponent extends TopComponent {
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                         .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
