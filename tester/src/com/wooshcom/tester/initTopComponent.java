@@ -91,7 +91,7 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.4";
+    public static String vers = "1.5";
     public static String noteText = "Notes: Do NOT use commas";
     public static String csvFileToRead = System.getProperty("user.home") + "/CSX1641.csv";
     public static String printText = " ";
