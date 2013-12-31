@@ -282,8 +282,8 @@ public final class initTopComponent extends TopComponent {
             int sn = serialNumber;
             dev[sn] = new device();
             String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
-            writer.write("\n" + sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
-            + "security" + "," + "Dsomething" + "," + "comments");
+            writer.write(sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
+            + "security" + "," + "Dsomething" + "," + "comments" + "\n");
             writer.close();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
