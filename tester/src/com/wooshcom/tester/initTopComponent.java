@@ -219,14 +219,15 @@ public final class initTopComponent extends TopComponent {
             while ((line = br.readLine()) != null) {
                 String[] csx = line.split(splitBy);
                 int num = csx.length;
-                if (num > 0) {
+                if ((num <= 0) || (csx[0].equals(""))) {                    
+                    System.out.println("Read error on CSV file num=" + num + " csx[0] =" + csx[0]);
+                    sn = 0;
+                } else {
                     sn = Integer.parseInt(csx[0]);
                     if (sn > lastSerial) {
                         lastSerial = sn;
                     }
                     dev[sn] = new device();
-                } else {
-                    sn = 0;
                 }
                 System.out.println("got " + num);
                 String prcsx = "";
