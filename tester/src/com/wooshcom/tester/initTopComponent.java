@@ -91,8 +91,8 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.3";
-    public static String noteText = "Notes:";
+    public static String vers = "1.4";
+    public static String noteText = "Notes: Do NOT use commas";
     public static String csvFileToRead = System.getProperty("user.home") + "/CSX1641.csv";
     public static String printText = " ";
     public static String FPGAfilename = " ";
@@ -166,6 +166,8 @@ public final class initTopComponent extends TopComponent {
         prefs = Preferences.userRoot().node(this.getClass().getName());
         FPGAfilename = prefs.get("FPGAFILENAME", FPGAfilename);
 
+        verl.setText("Version " + vers);
+        
         FPGAfileptr = new File(FPGAfilename);
         if (FPGAfileptr.exists()) {
             FPGAfile.setText(FPGAfilename);
@@ -287,7 +289,7 @@ public final class initTopComponent extends TopComponent {
             dev[sn] = new device();
             String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
             writer.write(sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
-                    + "security" + "," + "Dsomething" + "," + "comments" + "\n");
+                    + "security" + "," + "Dsomething" + "," + noteText + "\n");
             writer.close();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
@@ -1451,6 +1453,7 @@ public final class initTopComponent extends TopComponent {
         serNum = new javax.swing.JSpinner();
         jLabel2 = new javax.swing.JLabel();
         cont = new javax.swing.JButton();
+        verl = new javax.swing.JLabel();
         notes = new javax.swing.JTextField();
         jPanel5 = new javax.swing.JPanel();
         SNmatch = new javax.swing.JCheckBox();
@@ -1633,6 +1636,8 @@ public final class initTopComponent extends TopComponent {
             }
         });
 
+        org.openide.awt.Mnemonics.setLocalizedText(verl, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.verl.text")); // NOI18N
+
         notes.setText(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.notes.text")); // NOI18N
         notes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -1646,6 +1651,11 @@ public final class initTopComponent extends TopComponent {
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel4Layout.createSequentialGroup()
+                        .addComponent(SelectFPGA)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(programFPGA)
+                        .addGap(0, 40, Short.MAX_VALUE))
                     .addGroup(jPanel4Layout.createSequentialGroup()
                         .addContainerGap()
                         .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1666,17 +1676,13 @@ public final class initTopComponent extends TopComponent {
                                         .addComponent(initialize)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(startTest)))
-                                .addGap(0, 0, Short.MAX_VALUE))))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(printit)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(cont))
-                    .addGroup(jPanel4Layout.createSequentialGroup()
-                        .addComponent(SelectFPGA)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(programFPGA)
-                        .addGap(0, 40, Short.MAX_VALUE)))
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel4Layout.createSequentialGroup()
+                                .addComponent(verl)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(printit)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(cont)))))
                 .addContainerGap())
             .addComponent(notes)
         );
@@ -1707,7 +1713,8 @@ public final class initTopComponent extends TopComponent {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(cont)
-                    .addComponent(printit))
+                    .addComponent(printit)
+                    .addComponent(verl))
                 .addContainerGap())
         );
 
@@ -2286,6 +2293,7 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JSpinner serNum;
     private javax.swing.JButton startTest;
     private javax.swing.JLabel testerPresent;
+    private javax.swing.JLabel verl;
     // End of variables declaration//GEN-END:variables
     @Override
     public void componentOpened() {
