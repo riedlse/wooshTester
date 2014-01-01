@@ -92,7 +92,11 @@ public final class initTopComponent extends TopComponent {
     public device[] dev = new device[8192];
     public static boolean failed = false;
     public static String vers = "1.5";
-    public static String noteText = "Notes: Do NOT use commas";
+    public static String noteText = "Comments";
+    public static String verHardware = "D";
+    public static String verApp = "1.3.000";
+    public static String verBootloader = "1.3.0";
+    public static String verFPGA = "V 4.14";
     public static String csvFileToRead = System.getProperty("user.home") + "/CSX1641.csv";
     public static String printText = " ";
     public static String FPGAfilename = " ";
@@ -165,11 +169,23 @@ public final class initTopComponent extends TopComponent {
 
         prefs = Preferences.userRoot().node(this.getClass().getName());
         FPGAfilename = prefs.get("FPGAFILENAME", FPGAfilename);
+        verFPGA = prefs.get("VERFPGA", verFPGA);
+        verApp = prefs.get("VERAPP", verApp);
+        verBootloader = prefs.get("VERBOOTLOADER", verBootloader);
+        verHardware = prefs.get("VERHARDWARE", verHardware);
 
         verl.setText("Version " + vers);
-        
+        vApp.setText(verApp);
+        vBootloader.setText(verBootloader);
+        vFPGA.setText(verFPGA);
+        vHardware.setSelectedItem(verHardware);
+
         FPGAfileptr = new File(FPGAfilename);
         if (FPGAfileptr.exists()) {
+            String s = FPGAfileptr.getName();
+            int start = s.lastIndexOf('V') + 1;
+            verFPGA = "V " + s.substring(start, start + 1) + "." + s.substring(start + 2, start + 4);
+            vFPGA.setText(verFPGA);
             FPGAfile.setText(FPGAfilename);
             FPGAselected = true;
         }
@@ -289,8 +305,8 @@ public final class initTopComponent extends TopComponent {
             int sn = serialNumber;
             dev[sn] = new device();
             String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
-            writer.write(sn + "," + timeStamp + "," + oper + "," + boot + "," + code + "," + flash + ","
-                    + "security" + "," + "Dsomething" + "," + noteText + "\n");
+            writer.write(sn + "," + timeStamp + "," + oper + "," + verBootloader + "," + verApp + "," + verFPGA + ","
+                    + "Y" + "," + verHardware + "," + noteText + "\n");
             writer.close();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
@@ -314,6 +330,11 @@ public final class initTopComponent extends TopComponent {
     public void print() {
 
         printText = "Model of Unit Under Test: CSX-1641\n\n";
+
+        printText += "Application Version = " + verApp;
+        printText += "Bootloader Version = " + verBootloader;
+        printText += "Parts List Version = " + verHardware;
+        printText += "FPGA Version = " + verFPGA;
 
         String startStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testStart);
         String endStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testEnd);
@@ -1072,7 +1093,7 @@ public final class initTopComponent extends TopComponent {
 
             }
             Document doc1 = Jsoup.connect("http://192.168.34.50/mNetwork.htm").timeout(getTimeout).get();
-            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
+            //deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
             Elements inputElements1 = doc1.getElementsByTag("input");
             for (Element inputElement : inputElements1) {
                 String key = inputElement.attr("name");
@@ -1084,7 +1105,7 @@ public final class initTopComponent extends TopComponent {
                 }
             }
             Document doc2 = Jsoup.connect("http://192.168.34.50/tStream.htm").timeout(getTimeout).get();
-            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test / Maint");
+            deviceStatus.setText("Device found at 192.168.34.50 - Ready to test");
             Elements inputElements2 = doc2.getElementsByTag("input");
             for (Element inputElement : inputElements2) {
                 String key = inputElement.attr("name");
@@ -1455,6 +1476,7 @@ public final class initTopComponent extends TopComponent {
         jLabel2 = new javax.swing.JLabel();
         cont = new javax.swing.JButton();
         verl = new javax.swing.JLabel();
+        jPanel7 = new javax.swing.JPanel();
         notes = new javax.swing.JTextField();
         jPanel5 = new javax.swing.JPanel();
         SNmatch = new javax.swing.JCheckBox();
@@ -1482,9 +1504,21 @@ public final class initTopComponent extends TopComponent {
         ASI4 = new javax.swing.JCheckBox();
         ASI2 = new javax.swing.JCheckBox();
         jLabel3 = new javax.swing.JLabel();
+        jPanel6 = new javax.swing.JPanel();
+        vHardware = new javax.swing.JComboBox();
+        jLabel8 = new javax.swing.JLabel();
+        jLabel9 = new javax.swing.JLabel();
+        vApp = new javax.swing.JTextField();
+        jLabel10 = new javax.swing.JLabel();
+        vBootloader = new javax.swing.JTextField();
+        jLabel11 = new javax.swing.JLabel();
+        vFPGA = new javax.swing.JTextField();
+
+        jPanel1.setMinimumSize(new java.awt.Dimension(823, 686));
 
         jPanel2.setBackground(new java.awt.Color(255, 255, 255));
         jPanel2.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel2.border.title"))); // NOI18N
+        jPanel2.setMinimumSize(new java.awt.Dimension(393, 105));
 
         instructions.setFont(new java.awt.Font("Lucida Grande", 0, 18)); // NOI18N
         org.openide.awt.Mnemonics.setLocalizedText(instructions, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.instructions.text")); // NOI18N
@@ -1507,8 +1541,8 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(instructions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(instructions, javax.swing.GroupLayout.DEFAULT_SIZE, 497, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 215, Short.MAX_VALUE)
                         .addComponent(OK))
                     .addComponent(errorStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
@@ -1526,6 +1560,7 @@ public final class initTopComponent extends TopComponent {
         );
 
         jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel3.border.title"))); // NOI18N
+        jPanel3.setMinimumSize(new java.awt.Dimension(445, 162));
 
         org.openide.awt.Mnemonics.setLocalizedText(lserNum, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.lserNum.text")); // NOI18N
 
@@ -1551,7 +1586,7 @@ public final class initTopComponent extends TopComponent {
                     .addComponent(lserNum)
                     .addComponent(deviceStatus)
                     .addComponent(testerPresent))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(372, Short.MAX_VALUE))
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1639,12 +1674,32 @@ public final class initTopComponent extends TopComponent {
 
         org.openide.awt.Mnemonics.setLocalizedText(verl, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.verl.text")); // NOI18N
 
+        jPanel7.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel7.border.title"))); // NOI18N
+
+        notes.setFont(new java.awt.Font("Lucida Grande", 0, 10)); // NOI18N
         notes.setText(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.notes.text")); // NOI18N
         notes.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 notesActionPerformed(evt);
             }
         });
+
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(notes)
+                .addContainerGap())
+        );
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel7Layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(notes, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
 
         javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
         jPanel4.setLayout(jPanel4Layout);
@@ -1672,7 +1727,7 @@ public final class initTopComponent extends TopComponent {
                                     .addGroup(jPanel4Layout.createSequentialGroup()
                                         .addComponent(jLabel1)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addComponent(serNum, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addComponent(serNum, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE))
                                     .addGroup(jPanel4Layout.createSequentialGroup()
                                         .addComponent(initialize)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -1683,9 +1738,9 @@ public final class initTopComponent extends TopComponent {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(printit)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(cont)))))
+                                .addComponent(cont))))
+                    .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
-            .addComponent(notes)
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1710,7 +1765,7 @@ public final class initTopComponent extends TopComponent {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(FPGAfile)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(notes, javax.swing.GroupLayout.PREFERRED_SIZE, 71, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(cont)
@@ -2003,21 +2058,105 @@ public final class initTopComponent extends TopComponent {
                 .addContainerGap())
         );
 
+        jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jPanel6.border.title"))); // NOI18N
+        jPanel6.setMinimumSize(new java.awt.Dimension(351, 87));
+
+        vHardware.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J" }));
+        vHardware.setSelectedIndex(3);
+        vHardware.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                vHardwareActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel8, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel8.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel9, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel9.text")); // NOI18N
+
+        vApp.setText(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.vApp.text")); // NOI18N
+        vApp.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                vAppActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel10, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel10.text")); // NOI18N
+
+        vBootloader.setText(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.vBootloader.text")); // NOI18N
+        vBootloader.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                vBootloaderActionPerformed(evt);
+            }
+        });
+
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel11, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.jLabel11.text")); // NOI18N
+
+        vFPGA.setText(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.vFPGA.text")); // NOI18N
+        vFPGA.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                vFPGAActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel8)
+                    .addComponent(jLabel9))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(vHardware, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(vApp, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(46, 46, 46)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel10)
+                    .addComponent(jLabel11))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(vFPGA, javax.swing.GroupLayout.DEFAULT_SIZE, 77, Short.MAX_VALUE)
+                    .addComponent(vBootloader))
+                .addContainerGap(467, Short.MAX_VALUE))
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel6Layout.createSequentialGroup()
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel8)
+                    .addComponent(vHardware, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel10)
+                    .addComponent(vBootloader, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel9)
+                    .addComponent(vApp, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel11)
+                    .addComponent(vFPGA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+        );
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+                            .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
+
+        jPanel1Layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {jPanel2, jPanel3, jPanel6});
+
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
@@ -2029,6 +2168,8 @@ public final class initTopComponent extends TopComponent {
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -2049,6 +2190,11 @@ public final class initTopComponent extends TopComponent {
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             FPGAfilename = FPGAfileChooser.getSelectedFile().getAbsolutePath();
             FPGAfileptr = FPGAfileChooser.getSelectedFile();
+            String s = FPGAfileptr.getName();
+            int start = s.lastIndexOf('V') + 1;
+            verFPGA = "V " + s.substring(start, start + 1) + "." + s.substring(start + 2, start + 4);
+            vFPGA.setText(verFPGA);
+            prefs.put("VERFPGA", verFPGA);
             FPGAfile.setText(FPGAfilename);
             FPGAselected = true;
             prefs.put("FPGAFILENAME", FPGAfilename);
@@ -2230,7 +2376,7 @@ public final class initTopComponent extends TopComponent {
         ASI3.setSelected(false);
         cbasi4 = false;
         ASI4.setSelected(false);
-        noteText = "Note:";
+        noteText = "Comments";
         notes.setText(noteText);
         lastSerial++;
         SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(lastSerial + 1, minSerNum, minSerNum + 0x0fff, 1);
@@ -2240,6 +2386,26 @@ public final class initTopComponent extends TopComponent {
     private void notesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_notesActionPerformed
         noteText = notes.getText();
     }//GEN-LAST:event_notesActionPerformed
+
+    private void vHardwareActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vHardwareActionPerformed
+        verHardware = vHardware.getSelectedItem().toString();
+        prefs.put("VERHARDWARE", verHardware);
+    }//GEN-LAST:event_vHardwareActionPerformed
+
+    private void vAppActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vAppActionPerformed
+        verApp = vApp.getText();
+        prefs.put("VERAPP", verApp);
+    }//GEN-LAST:event_vAppActionPerformed
+
+    private void vBootloaderActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vBootloaderActionPerformed
+        verBootloader = vBootloader.getText();
+        prefs.put("VERBOOTLOADER", verBootloader);
+    }//GEN-LAST:event_vBootloaderActionPerformed
+
+    private void vFPGAActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vFPGAActionPerformed
+        verFPGA = vFPGA.getText();
+        prefs.put("VERFPGA", verFPGA);
+    }//GEN-LAST:event_vFPGAActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox ASI1;
@@ -2269,17 +2435,23 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JButton initialize;
     private javax.swing.JLabel instructions;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
+    private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
     private javax.swing.JLabel lOper;
     private javax.swing.JLabel lgMAC;
     private javax.swing.JLabel lmMAC;
@@ -2294,6 +2466,10 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JSpinner serNum;
     private javax.swing.JButton startTest;
     private javax.swing.JLabel testerPresent;
+    private javax.swing.JTextField vApp;
+    private javax.swing.JTextField vBootloader;
+    private javax.swing.JTextField vFPGA;
+    private javax.swing.JComboBox vHardware;
     private javax.swing.JLabel verl;
     // End of variables declaration//GEN-END:variables
     @Override
