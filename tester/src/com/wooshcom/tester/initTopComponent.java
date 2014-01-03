@@ -91,7 +91,7 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.6";
+    public static String vers = "1.7";
     public static String noteText = "Comments";
     public static String verHardware = "D";
     public static String verApp = "1.3.000";
@@ -1374,7 +1374,7 @@ public final class initTopComponent extends TopComponent {
                     errorStatus.setForeground(Color.black);
                     instructions.setText("Connect tester to UUT, move management port and Start Test");
                     startTest.setEnabled(true);
-                    if (runTest) {
+                    while (runTest) {
                         stage = 10;
                         startTest.setText("Stop Test");
                         errorStatus.setText("Status: TESTING");
@@ -1419,7 +1419,7 @@ public final class initTopComponent extends TopComponent {
                             }
                         }
                         stopTest = false;
-                        startTest.setText("Start Test");
+                        startTest.setText("Restart Test");
                         testerOff();
                         testEnd = Calendar.getInstance().getTime();
                         if (failed) {
@@ -1428,7 +1428,7 @@ public final class initTopComponent extends TopComponent {
                             errorStatus.setForeground(Color.red);
                             ok = false;
                             OK.setVisible(true);
-                            while (!ok) {
+                            while ((!ok) && (!runTest)) {
                                 delay(1);
                             }
                         } else {
@@ -1437,7 +1437,7 @@ public final class initTopComponent extends TopComponent {
                             errorStatus.setText("Data Test Passed");
                             ok = false;
                             OK.setVisible(true);
-                            while (!ok) {
+                            while ((!ok) && (!runTest)) {
                                 delay(1);
                             }                                                      
                             if (cbsn && cbglm1 && cbglm2 && cbglgi && cbglgo
@@ -1451,7 +1451,7 @@ public final class initTopComponent extends TopComponent {
                                 instructions.setText("Check all LEDs and Print results, then click OK");
                                 ok = false;
                                 OK.setVisible(true);
-                                while (!ok) {
+                                while ((!ok) && (!runTest)) {
                                     delay(1);
                                 }
                             }
@@ -1460,12 +1460,15 @@ public final class initTopComponent extends TopComponent {
                         cont.setEnabled(true);
                         instructions.setText("Click Test Next Unit to move to next device");
                         errorStatus.setText(" ");
-                        while (!cntu) {
+                        while ((!cntu) && (!runTest)) {
                             delay(1);
                         }
-                    } else {
-                        instructions.setText("Hook device up to tester and press Test");
-                        startTest.setText("Start Test");
+                        if (cntu) {
+                            startTest.setText("Start Test");
+                            startTest.setEnabled(false);
+                        } else {
+                            
+                        }                       
                     }
                     delay(1);
                 }
@@ -2255,12 +2258,10 @@ public final class initTopComponent extends TopComponent {
     }//GEN-LAST:event_printitActionPerformed
 
     private void startTestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startTestActionPerformed
-        if (startTest.getText().equals("Start Test")) {
-            runTest = true;
-            stopTest = false;
-        } else {
+        if (startTest.getText().equals("Stop Test")) {
             stopTest = true;
-            runTest = false;
+        } else {
+            runTest = true;
         }
     }//GEN-LAST:event_startTestActionPerformed
 
