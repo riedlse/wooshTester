@@ -71,7 +71,7 @@ import org.openide.util.NbBundle.Messages;
 )
 @Messages({
     "CTL_initAction=init",
-    "CTL_initTopComponent=CSX-1641 Tester",
+    "CTL_initTopComponent=CSX-1641 Tester Version 1.8",
     "HINT_initTopComponent=This window is for testing the CSX-1641 device"
 })
 public final class initTopComponent extends TopComponent {
@@ -91,7 +91,7 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.7";
+    public static String vers = "1.8";
     public static String noteText = "Comments";
     public static String verHardware = "D";
     public static String verApp = "1.3.000";
