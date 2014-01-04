@@ -224,9 +224,9 @@ public final class initTopComponent extends TopComponent {
     }
 
     public void readCsv() {
-        int sn = 0;
+        int sn;
         BufferedReader br = null;
-        String line = "";
+        String line;
         String splitBy = ",";
         try {
 
