@@ -71,7 +71,7 @@ import org.openide.util.NbBundle.Messages;
 )
 @Messages({
     "CTL_initAction=init",
-    "CTL_initTopComponent=CSX-1641 Tester Version 1.8",
+    "CTL_initTopComponent=CSX-1641 Tester Version 1.9",
     "HINT_initTopComponent=This window is for testing the CSX-1641 device"
 })
 public final class initTopComponent extends TopComponent {
@@ -91,7 +91,7 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.8";
+    public static String vers = "1.9";
     public static String noteText = "Comments";
     public static String verHardware = "D";
     public static String verApp = "1.3.000";
@@ -304,7 +304,8 @@ public final class initTopComponent extends TopComponent {
             int sn = serialNumber;
             dev[sn] = new device();
             String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
-            writer.write(sn + "," + timeStamp + "," + oper + "," + verBootloader + "," + verApp + "," + verFPGA + ","
+            noteText = notes.getText();
+            writer.write(sn + "," + timeStamp + "," + oper + "," + verApp + "," + verBootloader + "," + verFPGA + ","
                     + "Y" + "," + verHardware + "," + noteText + "\n");
             writer.close();
         } catch (IOException ex) {
@@ -328,18 +329,18 @@ public final class initTopComponent extends TopComponent {
 
     public void print() {
         MessageFormat footer;
-        printText = "Model of Unit Under Test: CSX-1641\n\n";
+        printText = "<p>Model of Unit Under Test: CSX-1641</p>";
 
-        printText += "Application Version = " + verApp;
-        printText += "Bootloader Version = " + verBootloader;
-        printText += "Parts List Version = " + verHardware;
-        printText += "FPGA Version = " + verFPGA;
+        printText += "<p>Application Version = " + verApp + "</p>";
+        printText += "<p>Bootloader Version = " + verBootloader + "</p>";
+        printText += "<p>Parts List Version = " + verHardware + "</p>";
+        printText += "<p>FPGA Version = " + verFPGA + "</p>";
 
         String startStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testStart);
         String endStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testEnd);
-        printText += lserNum.getText() + "\n";
-        printText += lmMAC.getText() + "\n";
-        printText += lgMAC.getText() + "\n";
+        printText += "<p>" + lserNum.getText() + "</p>";
+        printText += "<p>" + lmMAC.getText() + "</p>";
+        printText += "<p>" + lgMAC.getText() + "</p>";
 
         long duration = testEnd.getTime() - testStart.getTime();
         if (duration > 0) {
@@ -350,140 +351,141 @@ public final class initTopComponent extends TopComponent {
             long min = duration % 60;
             duration /= 60;
             long hours = duration % 24;
-            printText += "Test Started " + startStamp + "\n";
-            printText += "Test Ended " + endStamp + "\n";
-            printText += "Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "\n";
+            printText += "<p>Test Started " + startStamp + "</p>";
+            printText += "<p>Test Ended " + endStamp + "</p>";
+            printText += "<p>Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "</p>";
         }
 
         int errs = 0;
 
         if (cbsn) {
-            printText += "\nOK  - Serial Number match\n";
+            printText += "<p>OK  - Serial Number match</p>";
         } else {
-            printText += "\n<b>ERR</b> - Serial Number match\n";
+            printText += "<p><b>ERR</b> - Serial Number match</p>";
             errs++;
         }
 
-        printText += "\n\nLEDs Illuminate\n";
+        printText += "<p>LEDs Illuminate</p>";
 
         if (cborm1) {
-            printText += "OK  - Management Port 1 Orange/Right LED\n";
+            printText += "<p>OK  - Management Port 1 Orange/Right LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - Management Port 1 Orange/Right LED\n";
+            printText += "<p><b>ERR</b> - Management Port 1 Orange/Right LED</p>";
         }
 
         if (cbglm1) {
-            printText += "OK  - Management Port 1 Green/Left LED\n";
+            printText += "<p>OK  - Management Port 1 Green/Left LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - Management Port 1 Green/Left LED\n";
+            printText += "<p><b>ERR</b> - Management Port 1 Green/Left LED</p>";
         }
 
         if (cborm2) {
-            printText += "OK  - Management Port 2 Orange/Right LED\n";
+            printText += "<p>OK  - Management Port 2 Orange/Right LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - Management Port 2 Orange/Right LED\n";
+            printText += "<p><b>ERR</b> - Management Port 2 Orange/Right LED</p>";
         }
 
         if (cbglm2) {
-            printText += "OK  - Management Port 2 Green/Left LED\n";
+            printText += "<p>OK  - Management Port 2 Green/Left LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - Management Port 2 Green/Left LED\n";
+            printText += "<p><b>ERR</b> - Management Port 2 Green/Left LED</p>";
         }
 
         if (cborgi) {
-            printText += "OK  - GigE Input Orange/Right LED\n";
+            printText += "<p>OK  - GigE Input Orange/Right LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - GigE Input Orange/Right LED\n";
+            printText += "<p><b>ERR</b> - GigE Input Orange/Right LED</p>";
         }
 
         if (cbglgi) {
-            printText += "OK  - GigE Input Green/Left LED\n";
+            printText += "<p>OK  - GigE Input Green/Left LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - GigE Input Green/Left LED\n";
+            printText += "<p><b>ERR</b> - GigE Input Green/Left LED</p>";
         }
 
         if (cborgo) {
-            printText += "OK  - GigE Output Orange/Right LED\n";
+            printText += "<p>OK  - GigE Output Orange/Right LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - GigE Output Orange/Right LED\n";
+            printText += "<p><b>ERR</b> - GigE Output Orange/Right LED</p>";
         }
 
         if (cbglgo) {
-            printText += "OK  - GigE Output Green/Left LED\n";
+            printText += "<p>OK  - GigE Output Green/Left LED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - GigE Output Green/Left LED\n";
+            printText += "<p><b>ERR</b> - GigE Output Green/Left LED</p>";
         }
 
-        printText += "ASI Sync LEDs Green 1-";
+        printText += "<p>ASI Sync LEDs Green 1-";
         if (cbasi1) {
             printText += "OK  2-";
         } else {
             errs++;
-            printText += "ERR 2-";
+            printText += "<b>ERR</b> 2-";
         }
         if (cbasi2) {
             printText += "OK  3-";
         } else {
             errs++;
-            printText += "ERR 3-";
+            printText += "<b>ERR</b> 3-";
         }
         if (cbasi3) {
             printText += "OK  4-";
         } else {
             errs++;
-            printText += "ERR 4-";
+            printText += "<b>ERR</b> 4-";
         }
         if (cbasi4) {
-            printText += "OK\n";
+            printText += "OK</p>";
         } else {
             errs++;
-            printText += "ERR\n";
+            printText += "<b>ERR</b></p>";
         }
 
         if (cbredpwr) {
-            printText += "OK  - PWR/FAULT RED\n";
+            printText += "<p>OK  - PWR/FAULT RED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - PWR/FAULT RED\n";
+            printText += "<p><b>ERR</b> - PWR/FAULT RED</p>";
         }
 
         if (cbredfault) {
-            printText += "OK  - ALARM RED\n";
+            printText += "OK  - ALARM RED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - ALARM RED\n";
+            printText += "<p><b>ERR</b> - ALARM RED</p>";
         }
 
         if (cbredrestore) {
-            printText += "OK  - RESTORE RED\n";
+            printText += "<p>OK  - RESTORE RED</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - RESTORE RED\n";
+            printText += "<p><b>ERR</b> - RESTORE RED</p>";
         }
 
         if (cbgreen) {
-            printText += "OK  - PWR/FAULT GREEN\n";
+            printText += "<p>OK  - PWR/FAULT GREEN</p>";
         } else {
             errs++;
-            printText += "\n<b>ERR</b> - PWR/FAULT GREEN\n";
+            printText += "<p><b>ERR</b> - PWR/FAULT GREEN</p>";
         }
 
         if (failed) {
             errs++;
-            printText += "\n<b>ERR</b> - FAILED DATA TEST\n";
+            printText += "<p><b>ERR</b> - FAILED DATA TEST</p>";
         } else {
-            printText += "OK  - PASSED DATA TEST\n";
+            printText += "<p>OK  - PASSED DATA TEST</p>";
         }
 
-        printText += "\n\n\n Notes:" + noteText;
+        noteText = notes.getText();
+        printText += "<p> Notes:" + noteText;
 
         if (errs == 0) {
              footer = new MessageFormat("Overall Test Result for UUT S/N " + sserialNumber + " PASSED");
@@ -491,7 +493,7 @@ public final class initTopComponent extends TopComponent {
             footer = new MessageFormat("Overall Test Result for UUT S/N " + sserialNumber + " FAILED");
         }
 
-        MessageFormat header = new MessageFormat(" Wooshcom Production Test Follower CSX-1641");
+        MessageFormat header = new MessageFormat(" Wooshcom Production Test Follower CSX-1641 Version " + vers);
         ptext.setText(printText);
         PrintingTask task = new PrintingTask(header, footer);
         task.execute();
@@ -1414,7 +1416,7 @@ public final class initTopComponent extends TopComponent {
                             }
                             delay(1);
                             testSeconds++;
-                            if (testSeconds > 20) {
+                            if (testSeconds > 10) {
                                 stopTest = true;
                             }
                         }
