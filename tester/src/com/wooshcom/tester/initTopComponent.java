@@ -71,7 +71,7 @@ import org.openide.util.NbBundle.Messages;
 )
 @Messages({
     "CTL_initAction=init",
-    "CTL_initTopComponent=CSX-1641 Tester Version 1.9",
+    "CTL_initTopComponent=CSX-1641 Tester Version 1.10",
     "HINT_initTopComponent=This window is for testing the CSX-1641 device"
 })
 public final class initTopComponent extends TopComponent {
@@ -91,8 +91,8 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.9";
-    public static String noteText = "Comments";
+    public static String vers = "1.10";
+    public static String noteText = "";
     public static String verHardware = "D";
     public static String verApp = "1.3.000";
     public static String verBootloader = "1.3.0";
@@ -130,6 +130,7 @@ public final class initTopComponent extends TopComponent {
     public static boolean FPGAselected = false;
     public static boolean tPresent = false;
     public static boolean ok = false;
+    public static boolean reErase = false;
     public static boolean cntu = false;
     public boolean prReady = false;
     public String errorMessage = "";
@@ -182,6 +183,7 @@ public final class initTopComponent extends TopComponent {
         vHardware.setSelectedItem(verHardware);
 
         FPGAfileptr = new File(FPGAfilename);
+        programFPGA.setEnabled(false);
         if (FPGAfileptr.exists()) {
             String s = FPGAfileptr.getName();
             int start = s.lastIndexOf('V') + 1;
@@ -189,6 +191,7 @@ public final class initTopComponent extends TopComponent {
             vFPGA.setText(verFPGA);
             FPGAfile.setText(FPGAfilename);
             FPGAselected = true;
+            programFPGA.setEnabled(true);
         }
 
         long oor = System.currentTimeMillis();
@@ -209,7 +212,6 @@ public final class initTopComponent extends TopComponent {
         notes.setText(noteText);
         cont.setEnabled(false);
         OK.setVisible(false);
-        programFPGA.setEnabled(false);
         // create a blind text area for the print function to use.
         ptext = new JEditorPane("text/html", "");
         ptext.setFont(new java.awt.Font(useFont, Font.PLAIN, 10));
@@ -303,7 +305,7 @@ public final class initTopComponent extends TopComponent {
             writer = new BufferedWriter(new FileWriter(csvFileToRead, true));
             int sn = serialNumber;
             dev[sn] = new device();
-            String timeStamp = new SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().getTime());
+            String timeStamp = new SimpleDateFormat("MM/dd/yyyy").format(Calendar.getInstance().getTime());
             noteText = notes.getText();
             writer.write(sn + "," + timeStamp + "," + oper + "," + verApp + "," + verBootloader + "," + verFPGA + ","
                     + "Y" + "," + verHardware + "," + noteText + "\n");
@@ -331,16 +333,16 @@ public final class initTopComponent extends TopComponent {
         MessageFormat footer;
         printText = "<p>Model of Unit Under Test: CSX-1641</p>";
 
-        printText += "<p>Application Version = " + verApp + "</p>";
-        printText += "<p>Bootloader Version = " + verBootloader + "</p>";
-        printText += "<p>Parts List Version = " + verHardware + "</p>";
-        printText += "<p>FPGA Version = " + verFPGA + "</p>";
+        printText += "<p>Application Version = " + verApp + "<br>";
+        printText += "Bootloader Version = " + verBootloader + "<br>";
+        printText += "Parts List Version = " + verHardware + "<br>";
+        printText += "FPGA Version = " + verFPGA + "</p>";
 
         String startStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testStart);
         String endStamp = new SimpleDateFormat("MM/dd/yyyy HH:MM:SS").format(testEnd);
-        printText += "<p>" + lserNum.getText() + "</p>";
-        printText += "<p>" + lmMAC.getText() + "</p>";
-        printText += "<p>" + lgMAC.getText() + "</p>";
+        printText += "<p>" + lserNum.getText() + "<br>";
+        printText += lmMAC.getText() + "<br>";
+        printText += lgMAC.getText() + "<br>";
 
         long duration = testEnd.getTime() - testStart.getTime();
         if (duration > 0) {
@@ -351,146 +353,151 @@ public final class initTopComponent extends TopComponent {
             long min = duration % 60;
             duration /= 60;
             long hours = duration % 24;
-            printText += "<p>Test Started " + startStamp + "</p>";
-            printText += "<p>Test Ended " + endStamp + "</p>";
-            printText += "<p>Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "</p>";
+            printText += "Test Started " + startStamp + "<br>";
+            printText += "Test Ended " + endStamp + "<br>";
+            printText += "Test Duration " + hours + ":" + min + ":" + secs + "." + milli + "<br>";
         }
 
         int errs = 0;
 
         if (cbsn) {
-            printText += "<p>OK  - Serial Number match</p>";
+            printText += "</p><p>OK  - Serial Number match<br>";
         } else {
-            printText += "<p><b>ERR</b> - Serial Number match</p>";
+            printText += "</p><p><b>ERR</b> - Serial Number match<br>";
             errs++;
         }
 
-        printText += "<p>LEDs Illuminate</p>";
-
         if (cborm1) {
-            printText += "<p>OK  - Management Port 1 Orange/Right LED</p>";
+            printText += "OK  - Management Port 1 Orange/Right LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - Management Port 1 Orange/Right LED</p>";
+            printText += "<b>ERR</b> - Management Port 1 Orange/Right LED<br>";
         }
 
         if (cbglm1) {
-            printText += "<p>OK  - Management Port 1 Green/Left LED</p>";
+            printText += "OK  - Management Port 1 Green/Left LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - Management Port 1 Green/Left LED</p>";
+            printText += "<b>ERR</b> - Management Port 1 Green/Left LED<br>";
         }
 
         if (cborm2) {
-            printText += "<p>OK  - Management Port 2 Orange/Right LED</p>";
+            printText += "OK  - Management Port 2 Orange/Right LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - Management Port 2 Orange/Right LED</p>";
+            printText += "<b>ERR</b> - Management Port 2 Orange/Right LED<br>";
         }
 
         if (cbglm2) {
-            printText += "<p>OK  - Management Port 2 Green/Left LED</p>";
+            printText += "OK  - Management Port 2 Green/Left LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - Management Port 2 Green/Left LED</p>";
+            printText += "<b>ERR</b> - Management Port 2 Green/Left LED<br>";
         }
 
         if (cborgi) {
-            printText += "<p>OK  - GigE Input Orange/Right LED</p>";
+            printText += "OK  - GigE Input Orange/Right LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - GigE Input Orange/Right LED</p>";
+            printText += "<b>ERR</b> - GigE Input Orange/Right LED<br>";
         }
 
         if (cbglgi) {
-            printText += "<p>OK  - GigE Input Green/Left LED</p>";
+            printText += "OK  - GigE Input Green/Left LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - GigE Input Green/Left LED</p>";
+            printText += "<b>ERR</b> - GigE Input Green/Left LED<br>";
         }
 
         if (cborgo) {
-            printText += "<p>OK  - GigE Output Orange/Right LED</p>";
+            printText += "OK  - GigE Output Orange/Right LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - GigE Output Orange/Right LED</p>";
+            printText += "<b>ERR</b> - GigE Output Orange/Right LED<br>";
         }
 
         if (cbglgo) {
-            printText += "<p>OK  - GigE Output Green/Left LED</p>";
+            printText += "OK  - GigE Output Green/Left LED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - GigE Output Green/Left LED</p>";
-        }
-
-        printText += "<p>ASI Sync LEDs Green 1-";
-        if (cbasi1) {
-            printText += "OK  2-";
-        } else {
-            errs++;
-            printText += "<b>ERR</b> 2-";
-        }
-        if (cbasi2) {
-            printText += "OK  3-";
-        } else {
-            errs++;
-            printText += "<b>ERR</b> 3-";
-        }
-        if (cbasi3) {
-            printText += "OK  4-";
-        } else {
-            errs++;
-            printText += "<b>ERR</b> 4-";
-        }
-        if (cbasi4) {
-            printText += "OK</p>";
-        } else {
-            errs++;
-            printText += "<b>ERR</b></p>";
+            printText += "<b>ERR</b> - GigE Output Green/Left LED<br>";
         }
 
         if (cbredpwr) {
-            printText += "<p>OK  - PWR/FAULT RED</p>";
+            printText += "OK  - PWR/FAULT RED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - PWR/FAULT RED</p>";
+            printText += "<b>ERR</b> - PWR/FAULT RED<br>";
         }
 
         if (cbredfault) {
-            printText += "OK  - ALARM RED</p>";
+            printText += "OK  - ALARM RED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - ALARM RED</p>";
+            printText += "<b>ERR</b> - ALARM RED<br>";
         }
 
         if (cbredrestore) {
-            printText += "<p>OK  - RESTORE RED</p>";
+            printText += "OK  - RESTORE RED<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - RESTORE RED</p>";
+            printText += "<b>ERR</b> - RESTORE RED<br>";
         }
 
         if (cbgreen) {
-            printText += "<p>OK  - PWR/FAULT GREEN</p>";
+            printText += "OK  - PWR/FAULT GREEN<br>";
         } else {
             errs++;
-            printText += "<p><b>ERR</b> - PWR/FAULT GREEN</p>";
+            printText += "<b>ERR</b> - PWR/FAULT GREEN<br>";
         }
 
+        if (cbasi1) {
+            printText += "OK - ASI Sync LEDs Green 1<br>";
+        } else {
+            errs++;
+            printText += "<b>ERR</b> - ASI Sync LEDs Green 1<br>";
+        }
+        if (cbasi2) {
+            printText += "OK  - ASI Sync LEDs Green 2<br>";
+        } else {
+            errs++;
+            printText += "<b>ERR</b> - ASI Sync LEDs Green 2<br>";
+        }
+        if (cbasi3) {
+            printText += "OK  - ASI Sync LEDs Green 3<br>";
+        } else {
+            errs++;
+            printText += "<b>ERR</b> - ASI Sync LEDs Green 3<br>";
+        }
+        if (cbasi4) {
+            printText += "OK  - ASI Sync LEDs Green 4<br>";
+        } else {
+            errs++;
+            printText += "<b>ERR</b> - ASI Sync LEDs Green 4<br>";
+        }
+        if (cbrestore) {
+            printText += "OK  - Restore switch<br>";
+        } else {
+            errs++;
+            printText += "<b>ERR</b> - Restore switch<br>";
+        }
+        
         if (failed) {
             errs++;
-            printText += "<p><b>ERR</b> - FAILED DATA TEST</p>";
+            printText += "<b>ERR</b> - FAILED DATA TEST<br>";
         } else {
-            printText += "<p>OK  - PASSED DATA TEST</p>";
+            printText += "OK  - PASSED DATA TEST<br>";
         }
 
         noteText = notes.getText();
-        printText += "<p> Notes:" + noteText;
+        printText += "</p><p> Notes: " + noteText + "</p>";
 
         if (errs == 0) {
-             footer = new MessageFormat("Overall Test Result for UUT S/N " + sserialNumber + " PASSED");
+            footer = new MessageFormat("Overall Test Result for UUT S/N " + sserialNumber + " PASSED");
+            printText += "<h1>Overall Test Result for UUT S/N " + sserialNumber + " PASSED</h1>";
         } else {
             footer = new MessageFormat("Overall Test Result for UUT S/N " + sserialNumber + " FAILED");
+            printText += "<h1>Overall Test Result for UUT S/N " + sserialNumber + " FAILED</h1>";
         }
 
         MessageFormat header = new MessageFormat(" Wooshcom Production Test Follower CSX-1641 Version " + vers);
@@ -1004,11 +1011,14 @@ public final class initTopComponent extends TopComponent {
     }
 
     private void setupScreen() {
+        uutStatus.setText("UUT STATUS: UNFINISHED");
+        retest.setEnabled(false);
         stage = 0;
         runTest = false;
+        reErase = false;
         cbsn = false;
         SNmatch.setSelected(false);
-        SNmatch.setEnabled(false);
+        SNmatch.setEnabled(true);
         ORM1.setEnabled(false);
         ORM2.setEnabled(false);
         GLM1.setEnabled(false);
@@ -1020,7 +1030,6 @@ public final class initTopComponent extends TopComponent {
         GLGI.setEnabled(false);
         GLGO.setEnabled(false);
         printit.setEnabled(false);
-        SNmatch.setSelected(false);
         restoreSwitch.setSelected(false);
         restoreSwitch.setEnabled(false);
         cbrestore = false;
@@ -1056,7 +1065,7 @@ public final class initTopComponent extends TopComponent {
         ASI3.setSelected(false);
         cbasi4 = false;
         ASI4.setSelected(false);
-        noteText = "Comments";
+        noteText = "";
         notes.setText(noteText);
         // Calculate mac addresses
         serNum.setValue(serialNumber);
@@ -1247,10 +1256,12 @@ public final class initTopComponent extends TopComponent {
                 testerOff();
             }
 
+            SNmatch.setEnabled(true);
             while (true) {
-                SNmatch.setEnabled(true);
+                programFPGA.setEnabled(true);
                 instructions.setText("Searching for Device");
                 while (connect123()) {
+                    uutStatus.setText("UUT STATUS: UNFINISHED");
                     stage = 1;
                     while (!FPGAselected) {
                         instructions.setText("Please select FPGA file");
@@ -1266,16 +1277,7 @@ public final class initTopComponent extends TopComponent {
                     GLM1.setEnabled(true);
                     GLM2.setEnabled(true);
                     printit.setEnabled(true);
-                    /*                    cbglm1 = false;
-                     GLM1.setSelected(false);
-                     cbglm2 = false;
-                     GLM2.setSelected(false);
-                     cborm1 = false;
-                     ORM1.setSelected(false);
-                     cborm2 = false;
-                     ORM2.setSelected(false);
-                     */
-                    instructions.setText("Select checkboxes for serial number match and Manamgement port LEDs functioning Then click Initialize button");
+                    instructions.setText("Select checkboxes for serial number match and Management port LEDs functioning Then click Initialize button");
                     if (startProgram) {
                         stage = 2;
                         startProgram = false;
@@ -1307,28 +1309,44 @@ public final class initTopComponent extends TopComponent {
                         if (saveGige()) {
                             stage = 3;
                             FPGALED.setVisible(true);
+                            programFPGA.setEnabled(false);
                             instructions.setText("Observe PWR/Fault, Alarm & Restore on UUT and check appropriate boxes if correct, then click OK");
                             if (deleteFPGA()) {
                                 stage = 4;
                                 ok = false;
                                 OK.setVisible(true);
+                                reErase = false;
+                                retest.setEnabled(true);
                                 int count = 0;
                                 while (!ok) {
+                                    if (reErase) {
+                                        OK.setVisible(false);
+                                        reErase = false;
+                                        if (deleteFPGA()) {
+                                            
+                                        }
+                                        OK.setVisible(true);
+                                    }
                                     delay(1);
                                     count++;
                                 }
+                                retest.setEnabled(false);
                                 instructions.setText("Programming FPGA");
                                 if (programFPGA()) {
                                     stage = 5;
+                                    instructions.setText("Writing Maintenance MAC");
                                     if (saveMaint()) {
                                         stage = 6;
+                                        instructions.setText("Writing Serial Number");
                                         if (!saveSerial()) {
                                             errorStatus.setText("Error: Failed to program Serial Number");
                                             errorStatus.setForeground(Color.red);
                                         } else {
                                             stage = 7;
                                         }
+                                        instructions.setText("Resetting device");
                                         resetDevice(123);
+                                        delay(8);
                                     } else {
                                         errorStatus.setText("Error: Failed to program Maintenance MAC");
                                         errorStatus.setForeground(Color.red);
@@ -1355,6 +1373,7 @@ public final class initTopComponent extends TopComponent {
                     }
                     runTest = false;
                 }
+                programFPGA.setEnabled(true);
                 initialize.setEnabled(false);
                 while (connect124()) {
                     stage = 8;
@@ -1374,9 +1393,10 @@ public final class initTopComponent extends TopComponent {
                     errorStatus.setText("Status:");
                     printit.setEnabled(true);
                     errorStatus.setForeground(Color.black);
-                    instructions.setText("Connect tester to UUT, move management port and Start Test");
+                    instructions.setText("Connect tester to UUT and Start Test");
                     startTest.setEnabled(true);
                     while (runTest) {
+                        programFPGA.setEnabled(false);
                         stage = 10;
                         startTest.setText("Stop Test");
                         errorStatus.setText("Status: TESTING");
@@ -1416,7 +1436,7 @@ public final class initTopComponent extends TopComponent {
                             }
                             delay(1);
                             testSeconds++;
-                            if (testSeconds > 10) {
+                            if (testSeconds > 5) {
                                 stopTest = true;
                             }
                         }
@@ -1437,23 +1457,44 @@ public final class initTopComponent extends TopComponent {
                             restoreSwitch.setEnabled(true);
                             instructions.setText("Press Restore switch on UUT and verify LED status, Check box then click OK");
                             errorStatus.setText("Data Test Passed");
+                            errorStatus.setForeground(Color.black);
                             ok = false;
                             OK.setVisible(true);
                             while ((!ok) && (!runTest)) {
+                                if (cbsn && cbglm1 && cbglm2 && cbglgi && cbglgo
+                                        && cborm1 && cborm2 && cborgi && cborgo
+                                        && cbredpwr && cbredfault && cbredrestore && cbgreen
+                                        && cbasi1 && cbasi2 && cbasi3 && cbasi4 && cbrestore) {
+                                    uutStatus.setText("UUT STATUS: PASSED");
+                                } else {
+                                    uutStatus.setText("UUT STATUS: FAILED");
+                                }
                                 delay(1);
-                            }                                                      
+                            }
                             if (cbsn && cbglm1 && cbglm2 && cbglgi && cbglgo
                                     && cborm1 && cborm2 && cborgi && cborgo
                                     && cbredpwr && cbredfault && cbredrestore && cbgreen
                                     && cbasi1 && cbasi2 && cbasi3 && cbasi4 && cbrestore) {
                                 instructions.setText("All tests Passed, Printing");
+                                errorStatus.setText("PASSED - Data Test Passed");
+                                uutStatus.setText("UUT STATUS: PASSED");
                                 appendCsv();
                                 print();
+                                delay(8);
                             } else {
-                                instructions.setText("Check all LEDs and Print results, then click OK");
+                                instructions.setText("Check all LEDs, enter comments and Print results, then click OK");
+                                uutStatus.setText("UUT STATUS: FAILED");
                                 ok = false;
                                 OK.setVisible(true);
                                 while ((!ok) && (!runTest)) {
+                                    if (cbsn && cbglm1 && cbglm2 && cbglgi && cbglgo
+                                            && cborm1 && cborm2 && cborgi && cborgo
+                                            && cbredpwr && cbredfault && cbredrestore && cbgreen
+                                            && cbasi1 && cbasi2 && cbasi3 && cbasi4 && cbrestore) {
+                                        uutStatus.setText("UUT STATUS: PASSED");
+                                    } else {
+                                        uutStatus.setText("UUT STATUS: FAILED");
+                                    }
                                     delay(1);
                                 }
                             }
@@ -1537,6 +1578,7 @@ public final class initTopComponent extends TopComponent {
         redRestore = new javax.swing.JCheckBox();
         greenPwr = new javax.swing.JCheckBox();
         redAlarm = new javax.swing.JCheckBox();
+        retest = new javax.swing.JButton();
         ASILED = new javax.swing.JPanel();
         ASI1 = new javax.swing.JCheckBox();
         ASI3 = new javax.swing.JCheckBox();
@@ -1553,6 +1595,7 @@ public final class initTopComponent extends TopComponent {
         vBootloader = new javax.swing.JTextField();
         jLabel11 = new javax.swing.JLabel();
         vFPGA = new javax.swing.JTextField();
+        uutStatus = new javax.swing.JLabel();
 
         jPanel1.setMinimumSize(new java.awt.Dimension(883, 556));
 
@@ -1577,7 +1620,7 @@ public final class initTopComponent extends TopComponent {
                         .addComponent(instructions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                     .addGroup(jPanel2Layout.createSequentialGroup()
-                        .addComponent(errorStatus, javax.swing.GroupLayout.DEFAULT_SIZE, 706, Short.MAX_VALUE)
+                        .addComponent(errorStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addGap(87, 87, 87))))
         );
         jPanel2Layout.setVerticalGroup(
@@ -1621,7 +1664,7 @@ public final class initTopComponent extends TopComponent {
             jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel7Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(notes)
+                .addComponent(notes, javax.swing.GroupLayout.DEFAULT_SIZE, 333, Short.MAX_VALUE)
                 .addContainerGap())
         );
         jPanel7Layout.setVerticalGroup(
@@ -1642,10 +1685,10 @@ public final class initTopComponent extends TopComponent {
                     .addComponent(lgMAC)
                     .addComponent(lmMAC)
                     .addComponent(lserNum)
-                    .addComponent(deviceStatus)
-                    .addComponent(testerPresent))
-                .addGap(13, 13, 13)
-                .addComponent(jPanel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(testerPresent)
+                    .addComponent(deviceStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
         jPanel3Layout.setVerticalGroup(
@@ -1980,6 +2023,13 @@ public final class initTopComponent extends TopComponent {
             }
         });
 
+        org.openide.awt.Mnemonics.setLocalizedText(retest, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.retest.text")); // NOI18N
+        retest.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                retestActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout FPGALEDLayout = new javax.swing.GroupLayout(FPGALED);
         FPGALED.setLayout(FPGALEDLayout);
         FPGALEDLayout.setHorizontalGroup(
@@ -1990,7 +2040,8 @@ public final class initTopComponent extends TopComponent {
                     .addComponent(greenPwr)
                     .addComponent(RedPwr)
                     .addComponent(redAlarm)
-                    .addComponent(redRestore))
+                    .addComponent(redRestore)
+                    .addComponent(retest))
                 .addContainerGap(26, Short.MAX_VALUE))
         );
         FPGALEDLayout.setVerticalGroup(
@@ -2004,7 +2055,9 @@ public final class initTopComponent extends TopComponent {
                 .addComponent(redRestore)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(greenPwr)
-                .addContainerGap())
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(retest)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         ASILED.setBorder(javax.swing.BorderFactory.createTitledBorder(org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.ASILED.border.title"))); // NOI18N
@@ -2101,10 +2154,10 @@ public final class initTopComponent extends TopComponent {
                     .addComponent(SNmatch)
                     .addComponent(restoreSwitch))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(net, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(FPGALED, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ASILED, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(net, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(ASILED, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(FPGALED, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -2148,6 +2201,9 @@ public final class initTopComponent extends TopComponent {
             }
         });
 
+        uutStatus.setFont(new java.awt.Font("Arial Black", 1, 14)); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(uutStatus, org.openide.util.NbBundle.getMessage(initTopComponent.class, "initTopComponent.uutStatus.text")); // NOI18N
+
         javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
         jPanel6.setLayout(jPanel6Layout);
         jPanel6Layout.setHorizontalGroup(
@@ -2169,7 +2225,9 @@ public final class initTopComponent extends TopComponent {
                 .addComponent(jLabel11)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(vFPGA, javax.swing.GroupLayout.PREFERRED_SIZE, 77, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(276, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addComponent(uutStatus)
+                .addContainerGap(79, Short.MAX_VALUE))
         );
         jPanel6Layout.setVerticalGroup(
             jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -2182,7 +2240,8 @@ public final class initTopComponent extends TopComponent {
                     .addComponent(jLabel9)
                     .addComponent(vApp, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel11)
-                    .addComponent(vFPGA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(vFPGA, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(uutStatus))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
@@ -2193,19 +2252,18 @@ public final class initTopComponent extends TopComponent {
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                        .addComponent(jPanel3, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jPanel2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(jPanel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(0, 97, Short.MAX_VALUE)))
+                .addContainerGap())
         );
-
-        jPanel1Layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {jPanel2, jPanel6});
-
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
@@ -2214,12 +2272,12 @@ public final class initTopComponent extends TopComponent {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
@@ -2270,7 +2328,6 @@ public final class initTopComponent extends TopComponent {
     }//GEN-LAST:event_operatorActionPerformed
 
     private void initializeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_initializeActionPerformed
-        setupScreen();
         startProgram = true;
     }//GEN-LAST:event_initializeActionPerformed
 
@@ -2295,9 +2352,12 @@ public final class initTopComponent extends TopComponent {
 
     private void programFPGAActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_programFPGAActionPerformed
         if (connect123()) {
+            instructions.setText("Found device at .123 Eraseing FPGA");
             if (deleteFPGA()) {
+                instructions.setText("Programming FPGA");
                 if (programFPGA()) {
                     delay(10);
+                    instructions.setText("Resetting Device");
                     resetDevice(123);
                 } else {
                     errorStatus.setText("Error: Failed to program FPGA");
@@ -2307,17 +2367,19 @@ public final class initTopComponent extends TopComponent {
             }
         } else {
             if (connect50()) {
+                instructions.setText("Found device at .50 Eraseing FPGA");
                 if (deleteFPGA50()) {
+                    instructions.setText("Programming FPGA");
                     if (programFPGA50()) {
                         delay(10);
+                        instructions.setText("Resetting Device");
                         resetDevice(50);
                     } else {
                         errorStatus.setText("Error: Failed to program FPGA");
                     }
 
                 }
-
-                errorStatus.setText("Error: Device must be at .123 IP to program FPGA");
+                errorStatus.setText("Error: No device found to program");
             }
         }
     }//GEN-LAST:event_programFPGAActionPerformed
@@ -2430,6 +2492,10 @@ public final class initTopComponent extends TopComponent {
         cbrestore = restoreSwitch.isSelected();
     }//GEN-LAST:event_restoreSwitchActionPerformed
 
+    private void retestActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_retestActionPerformed
+        reErase = true;
+    }//GEN-LAST:event_retestActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JCheckBox ASI1;
     private javax.swing.JCheckBox ASI2;
@@ -2487,9 +2553,11 @@ public final class initTopComponent extends TopComponent {
     private javax.swing.JCheckBox redAlarm;
     private javax.swing.JCheckBox redRestore;
     private javax.swing.JCheckBox restoreSwitch;
+    private javax.swing.JButton retest;
     private javax.swing.JSpinner serNum;
     private javax.swing.JButton startTest;
     private javax.swing.JLabel testerPresent;
+    private javax.swing.JLabel uutStatus;
     private javax.swing.JTextField vApp;
     private javax.swing.JTextField vBootloader;
     private javax.swing.JTextField vFPGA;
