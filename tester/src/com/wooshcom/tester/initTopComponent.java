@@ -71,7 +71,7 @@ import org.openide.util.NbBundle.Messages;
 )
 @Messages({
     "CTL_initAction=init",
-    "CTL_initTopComponent=CSX-1641 Tester Version 1.10",
+    "CTL_initTopComponent=CSX-1641 Tester Version 1.11",
     "HINT_initTopComponent=This window is for testing the CSX-1641 device"
 })
 public final class initTopComponent extends TopComponent {
@@ -91,7 +91,7 @@ public final class initTopComponent extends TopComponent {
     public static final int minSerNum = 1001;
     public device[] dev = new device[8192];
     public static boolean failed = false;
-    public static String vers = "1.10";
+    public static String vers = "1.11";
     public static String noteText = "";
     public static String verHardware = "D";
     public static String verApp = "1.3.000";
@@ -1279,6 +1279,7 @@ public final class initTopComponent extends TopComponent {
                     printit.setEnabled(true);
                     instructions.setText("Select checkboxes for serial number match and Management port LEDs functioning Then click Initialize button");
                     if (startProgram) {
+                        initialize.setEnabled(false);
                         stage = 2;
                         startProgram = false;
                         cborgi = false;
@@ -1346,7 +1347,7 @@ public final class initTopComponent extends TopComponent {
                                         }
                                         instructions.setText("Resetting device");
                                         resetDevice(123);
-                                        delay(8);
+                                        delay(5);
                                     } else {
                                         errorStatus.setText("Error: Failed to program Maintenance MAC");
                                         errorStatus.setForeground(Color.red);
